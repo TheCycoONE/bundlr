@@ -345,7 +345,8 @@ public class ParserController {
 
     private void changeColumnNames(Map<String,String> fileMap) {
         parserTable.getColumns().clear();
-        Set<TableColumn> tableColumns=fileMap.keySet().stream().map(TableColumn::new).collect(Collectors.toSet());
+        Set<String> columnNames=new TreeSet<>(fileMap.keySet());
+        Set<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toSet());
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
         codeColumn.setCellFactory(param -> new EditCell3());
