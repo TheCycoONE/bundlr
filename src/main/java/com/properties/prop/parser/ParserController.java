@@ -160,6 +160,11 @@ public class ParserController {
                 }
             }
         });
+        bundleBox.setOnKeyPressed(event -> {
+            if(event.getCode()==KeyCode.ENTER){
+                bundleBox.show();
+            }
+        });
         parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
             Comparator<Resource> comparator= (o1, o2) -> o1.getCode().equals("") ? 1
                     : o2.getCode().equals("") ? -1
