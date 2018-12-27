@@ -1,0 +1,52 @@
+buildscript {
+	ext {
+		springBootVersion = '2.1.1.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+plugins {
+	id 'application'
+	id 'org.openjfx.javafxplugin' version '0.0.5'
+}
+
+javafx {
+	modules = [ 'javafx.controls', 'javafx.fxml' ]
+	version = "11.0.+"
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.properties'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 11
+
+repositories {
+	mavenCentral()
+}
+
+
+bootJar {
+	mainClassName = 'com.properties.prop.parser.ParserApplication'
+	launchScript()
+}
+
+dependencies {
+	implementation('org.springframework.boot:spring-boot-starter')
+	testImplementation('org.springframework.boot:spring-boot-starter-test')
+}
+dependencies {
+	compile group: 'commons-io', name: 'commons-io', version: '2.6'
+	compile group: 'commons-configuration', name: 'commons-configuration', version: '1.6'
+	compile group: 'org.apache.lucene', name: 'lucene-core', version: '7.6.0'
+	compile group: 'org.apache.lucene', name: 'lucene-analyzers-common', version: '7.6.0'
+	compile group: 'org.apache.lucene', name: 'lucene-queryparser', version: '7.6.0'
+	compile group: 'org.apache.lucene', name: 'lucene-queries', version: '7.6.0'
+}
