@@ -241,7 +241,7 @@ public class ParserController {
             if(fileArray!=null) {
                 List<File> files = Arrays.asList(fileArray);
                 resources = fileService.loadRowData(files);
-                Map<String,String> fileMap=new HashMap<>();
+                Map<String,String> fileMap=new LinkedHashMap<>();
                 for(File currentFile : files){
                     fileMap.put(FilenameUtils.getBaseName(currentFile.getName()),currentFile.getPath());
                 }

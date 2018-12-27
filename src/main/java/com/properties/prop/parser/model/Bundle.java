@@ -1,6 +1,6 @@
 package com.properties.prop.parser.model;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,14 +14,14 @@ public class Bundle {
         this.name = name;
         this.path = path;
         id=UUID.randomUUID().toString();
-        fileMap=new HashMap<>();
+        fileMap=new LinkedHashMap<>();
     }
 
     public Bundle(String name, String path,String id) {
         this.name = name;
         this.path = path;
         this.id = id;
-        fileMap=new HashMap<>();
+        fileMap=new LinkedHashMap<>();
     }
 
     public String getName() {
