@@ -354,7 +354,7 @@ public class ParserController {
                             cellEditEvent.getTablePosition().getRow());
                     String oldCode = resource.getCode();
                     if (!cellEditEvent.getNewValue().equals("")) {
-                        if(!cellEditEvent.getNewValue().equals(oldCode)) {
+                        if(!cellEditEvent.getNewValue().equals(oldCode)&&!cellEditEvent.getNewValue().contains(" ")) {
                             resource.setCode(cellEditEvent.getNewValue());
                             try {
                                 if (!oldCode.equals("")) {
@@ -372,6 +372,8 @@ public class ParserController {
                             } catch (ConfigurationException e) {
                                 e.printStackTrace();
                             }
+                        }else{
+                            parserTable.refresh();
                         }
                     }else{
                         parserTable.refresh();
@@ -396,6 +398,8 @@ public class ParserController {
                         } catch (ConfigurationException e) {
                             e.printStackTrace();
                         }
+                    }else{
+                        parserTable.refresh();
                     }
                 }else{
                     parserTable.refresh();
