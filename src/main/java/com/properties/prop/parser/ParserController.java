@@ -246,6 +246,7 @@ public class ParserController {
                     fileMap.put(FilenameUtils.getBaseName(currentFile.getName()),currentFile.getPath());
                 }
                 bundle.setFileMap(fileMap);
+                resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(),fileMap.keySet());
                 resourceIndexService.addDocuments(bundle.getName(), resources);
             }
         }
