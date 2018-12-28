@@ -363,24 +363,29 @@ public class ParserController {
                     Resource resource = (cellEditEvent).getTableView().getItems().get(
                             cellEditEvent.getTablePosition().getRow());
                     String oldCode = resource.getCode();
+                    boolean isCodeRepeated=resources.stream().map(currentResource -> currentResource.getCode()).anyMatch(code -> code.equals(cellEditEvent.getNewValue()));
                     if (!cellEditEvent.getNewValue().equals("")) {
                         if(!cellEditEvent.getNewValue().equals(oldCode)&&!cellEditEvent.getNewValue().contains(" ")) {
-                            resource.setCode(cellEditEvent.getNewValue());
-                            try {
-                                if (!oldCode.equals("")) {
-                                    resourceIndexService.updateDocument(currentBundle.getName(), resource);
-                                    List<Tuple> tuples = new LinkedList<>();
-                                    for (String key : fileMap.keySet()) {
-                                        tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
+                            if(!isCodeRepeated) {
+                                resource.setCode(cellEditEvent.getNewValue());
+                                try {
+                                    if (!oldCode.equals("")) {
+                                        resourceIndexService.updateDocument(currentBundle.getName(), resource);
+                                        List<Tuple> tuples = new LinkedList<>();
+                                        for (String key : fileMap.keySet()) {
+                                            tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
+                                        }
+                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
+                                    } else {
+                                        parserTable.getItems().add(new Resource(""));
                                     }
-                                    fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
-                                } else {
-                                    parserTable.getItems().add(new Resource(""));
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } catch (ConfigurationException e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } catch (ConfigurationException e) {
-                                e.printStackTrace();
+                            }else{
+                                parserTable.refresh();
                             }
                         }else{
                             parserTable.refresh();
