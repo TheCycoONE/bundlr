@@ -117,11 +117,11 @@ public class ResourceAnalyzerFactory implements LocalizedAnalyzerFactory {
                 return new BengaliAnalyzer(CharArraySet.EMPTY_SET);
             case "ca":
                 return new CatalanAnalyzer(CharArraySet.EMPTY_SET);
-            case "ch":
+            case "zh":
                 return new CJKAnalyzer(CharArraySet.EMPTY_SET);
-            case "jp":
+            case "ja":
                 return new CJKAnalyzer(CharArraySet.EMPTY_SET);
-            case "kr":
+            case "ko":
                 return new CJKAnalyzer(CharArraySet.EMPTY_SET);
             default:
                 return new StandardAnalyzer(CharArraySet.EMPTY_SET);
