@@ -31,14 +31,19 @@ public class FileServiceImpl implements FileService {
         for(PropertiesConfiguration propertiesConfiguration : propertiesConfigurations){
             for(String key : keys){
                 String value=propertiesConfiguration.getString(key);
-                Resource resource= resourceMap.containsKey(key) ? resourceMap.get(key) : new Resource(key);
+                Resource resource;
+                if(resourceMap.containsKey(key)){
+                    resource=resourceMap.get(key);
+                }else {
+                    resource=new Resource(key);
+                    resourceMap.put(key, resource);
+                }
                 String fileName= FilenameUtils.getBaseName(propertiesConfiguration.getFileName());
                 if(value!=null){
                     resource.setProperty(fileName,value);
                 }else {
                     resource.setProperty(fileName,"");
                 }
-                resourceMap.put(key,resource);
             }
         }
         return FXCollections.observableArrayList(resourceMap.values());
