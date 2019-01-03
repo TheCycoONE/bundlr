@@ -80,6 +80,7 @@ public class DocumentStore {
             IndexWriter writer = new IndexWriter(index, config);
             List<IndexableField> fields = document.getFields();
             writer.updateDocument(new Term(key, value), document);
+            writer.forceMergeDeletes();
             writer.commit();
             writer.close();
         }

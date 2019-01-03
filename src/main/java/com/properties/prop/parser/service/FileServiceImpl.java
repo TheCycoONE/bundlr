@@ -96,9 +96,11 @@ public class FileServiceImpl implements FileService {
     private void updateKeyValue(String code,String newCode,Tuple fileKeyValuePair) throws IOException, ConfigurationException {
         File file = new File(fileKeyValuePair.getKey());
         PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
+        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
         if(fileKeyValuePair.getValue()!=null&&!fileKeyValuePair.getValue().equals("")) {
-            layout.getConfiguration().setProperty(newCode, fileKeyValuePair.getValue());
+            layout.getConfiguration().clearProperty(code);
+            layout.getConfiguration().setProperty(newCode,new String(fileKeyValuePair.getValue().getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")) );
         }
-        layout.save(new FileWriter(fileKeyValuePair.getKey(), false));
+        layout.save(new FileWriter(fileKeyValuePair.getKey(), Charset.forName("ISO-8859-1"),false));
     }
 }

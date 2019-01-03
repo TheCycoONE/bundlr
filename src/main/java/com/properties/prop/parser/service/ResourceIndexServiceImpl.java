@@ -77,7 +77,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         if(stores.containsKey(storeName)){
             Document document=resourceDocumentConverter.convertToDocument(resource);
             DocumentStore documentStore=stores.get(storeName);
-            documentStore.updateDocument("code",resource.getCode(),document);
+            documentStore.updateDocument("id",resource.getId(),document);
         }
     }
 
