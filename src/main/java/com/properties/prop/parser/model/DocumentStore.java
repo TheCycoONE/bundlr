@@ -106,7 +106,7 @@ public class DocumentStore {
             queryParser.setDefaultOperator(QueryParser.Operator.OR);
             queryParser.setAllowLeadingWildcard(true);
             Query query = queryParser.parse(queryString);
-            int hitsPerPage = 50;
+            int hitsPerPage = 1000;
             IndexReader reader = DirectoryReader.open(index);
             return getDocuments(query, hitsPerPage, reader);
         }
