@@ -71,8 +71,9 @@ public class FileServiceImpl implements FileService {
     private void removeProperty(String filePath,String code) throws IOException, ConfigurationException {
         File file = new File(filePath);
         PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
-        layout.getConfiguration().clearProperty(code);
-        layout.save(new FileWriter(filePath, false));
+        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
+        layout.getConfiguration().setProperty(code,null);
+        layout.save(new FileWriter(file, Charset.forName("ISO-8859-1"),false));
     }
     private void removeProperties(Collection<String> filePaths,String code) throws IOException, ConfigurationException {
         for(String filePath : filePaths){
@@ -98,7 +99,7 @@ public class FileServiceImpl implements FileService {
         PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
         layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
         if(fileKeyValuePair.getValue()!=null&&!fileKeyValuePair.getValue().equals("")) {
-            layout.getConfiguration().clearProperty(code);
+            layout.getConfiguration().setProperty(code,null);
             layout.getConfiguration().setProperty(newCode,new String(fileKeyValuePair.getValue().getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")) );
         }
         layout.save(new FileWriter(fileKeyValuePair.getKey(), Charset.forName("ISO-8859-1"),false));
