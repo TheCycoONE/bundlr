@@ -428,12 +428,13 @@ public class ParserController {
     @FXML private void filterBundles() throws IOException, ParseException {
         if(currentBundle!=null) {
             String queryString = bundleSearchField.getText();
+            ObservableList<Bundle> searchedBundles;
             if (queryString.equals("")) {
                 queryString = "*:*";
             } else {
                 queryString = "*" + queryString + "*";
             }
-            ObservableList<Bundle> searchedBundles = bundleService.searchBundles(queryString);
+            searchedBundles = bundleService.searchBundles(queryString);
             if (!searchedBundles.isEmpty()) {
                 bundleBox.getItems().clear();
                 bundles=searchedBundles;
@@ -530,23 +531,28 @@ public class ParserController {
         if(currentBundle!=null) {
             String searchString=searchBar.getText();
             String queryString = searchString;
-            if (queryString.equals("")) {
-                queryString = "*:*";
-            }
             String[] fieldsArray = getFieldsArray();
             ObservableList<Resource> searchedResources;
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
-                searchedResources= resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
-                if(!searchedResources.isEmpty()) {
-                    parserTable.setItems(searchedResources);
-                    matchFound=true;
+                if(!queryString.equals("")) {
+                    searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+                    if (!searchedResources.isEmpty()) {
+                        parserTable.setItems(searchedResources);
+                        matchFound = true;
+                    } else {
+                        queryString = "*" + queryString + "*";
+                        searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+                        if (!searchedResources.isEmpty()) {
+                            parserTable.setItems(searchedResources);
+                            matchFound = true;
+                        }
+                    }
                 }else {
-                    queryString="*"+queryString+"*";
-                    searchedResources= resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+                    searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
                     if(!searchedResources.isEmpty()){
                         parserTable.setItems(searchedResources);
-                        matchFound=true;
+                        matchFound = true;
                     }
                 }
             }
@@ -556,16 +562,24 @@ public class ParserController {
                 for(Bundle bundle : otherBundles) {
                         String[] bundleFieldsArray =bundle.getFileMap().keySet().toArray(String[]::new);
                         if (resourceIndexService.storeExists(bundle.getName())) {
-                            searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
-                            if (!searchedResources.isEmpty()) {
-                                changeBundle(bundle);
-                                parserTable.setItems(searchedResources);
-                                break;
-                            } else {
-                                queryString = "*" + queryString + "*";
+                            if(!queryString.equals("")) {
                                 searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
                                 if (!searchedResources.isEmpty()) {
                                     changeBundle(bundle);
+                                    parserTable.setItems(searchedResources);
+                                    break;
+                                } else {
+                                    queryString = "*" + queryString + "*";
+                                    searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
+                                    if (!searchedResources.isEmpty()) {
+                                        changeBundle(bundle);
+                                        parserTable.setItems(searchedResources);
+                                        break;
+                                    }
+                                }
+                            }else {
+                                searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
+                                if(!searchedResources.isEmpty()){
                                     parserTable.setItems(searchedResources);
                                     break;
                                 }
