@@ -423,6 +423,17 @@ public class ParserController {
         }
         parserTable.getColumns().add(codeColumn);
         parserTable.getColumns().addAll(tableColumns);
+        int numberOfCols=parserTable.getColumns().size();
+        List<TableColumn> columns=(List<TableColumn>)parserTable.getColumns();
+        int index=0;
+        for(TableColumn column : columns){
+            if(index!=numberOfCols-1) {
+                column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
+            }else{
+                column.prefWidthProperty().set(parserTable.getWidth()/numberOfCols-16);
+            }
+            index++;
+        }
     }
 
     @FXML private void filterBundles() throws IOException, ParseException {
