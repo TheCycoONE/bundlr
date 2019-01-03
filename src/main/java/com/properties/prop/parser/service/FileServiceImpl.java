@@ -11,12 +11,14 @@ import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
 public class FileServiceImpl implements FileService {
 
-    public ObservableList<Resource> loadRowData(List<File> files) throws FileNotFoundException, ConfigurationException {
+    public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException {
         Set<String> keys=new LinkedHashSet<>();
         Map<String,Resource> resourceMap=new LinkedHashMap<>();
         List<PropertiesConfiguration> propertiesConfigurations=new LinkedList<>();
@@ -40,7 +42,7 @@ public class FileServiceImpl implements FileService {
                 }
                 String fileName= FilenameUtils.getBaseName(propertiesConfiguration.getFileName());
                 if(value!=null){
-                    resource.setProperty(fileName,value);
+                    resource.setProperty(fileName,new String(value.getBytes(Charset.forName("ISO-8859-1")), Charset.forName("UTF-8")));
                 }else {
                     resource.setProperty(fileName,"");
                 }
@@ -54,9 +56,9 @@ public class FileServiceImpl implements FileService {
         File file = new File(filePath);
         PropertiesConfiguration config = new PropertiesConfiguration();
         PropertiesConfigurationLayout layout = new PropertiesConfigurationLayout(config);
-        layout.load(new InputStreamReader(new FileInputStream(file)));
-        config.setProperty(key, value);
-        layout.save(new FileWriter(filePath, false));
+        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
+        config.setProperty(key,new String(value.getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")));
+        layout.save(new FileWriter(filePath, Charset.forName("ISO-8859-1"),false));
     }
 
     @Override
