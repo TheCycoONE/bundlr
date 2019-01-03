@@ -103,7 +103,7 @@ public class DocumentStore {
     public List<Document> searchIndex(String queryString, String[] fieldsArray) throws ParseException, IOException {
         if(analyzer!=null) {
             MultiFieldQueryParser queryParser = new MultiFieldQueryParser(fieldsArray, analyzer);
-            queryParser.setDefaultOperator(QueryParser.Operator.OR);
+            queryParser.setDefaultOperator(QueryParser.Operator.AND);
             queryParser.setAllowLeadingWildcard(true);
             Query query = queryParser.parse(queryString);
             int hitsPerPage = 1000;
