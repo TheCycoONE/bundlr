@@ -116,7 +116,7 @@ public class DocumentStore {
     public List<Document> getAllDocuments() throws IOException {
         Query query=new MatchAllDocsQuery();
         IndexReader reader= DirectoryReader.open(index);
-        int numOfDocs=reader.numDocs();
+        int numOfDocs=reader.numDocs() !=0 ? reader.numDocs() : 1;
         return getDocuments(query, numOfDocs, reader);
     }
 
