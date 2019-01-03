@@ -1,5 +1,6 @@
 package com.properties.prop.parser.model;
 
+import com.properties.prop.parser.util.StringUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
@@ -105,6 +106,7 @@ public class DocumentStore {
             MultiFieldQueryParser queryParser = new MultiFieldQueryParser(fieldsArray, analyzer);
             queryParser.setDefaultOperator(QueryParser.Operator.AND);
             queryParser.setAllowLeadingWildcard(true);
+            queryString= StringUtil.escape(queryString);
             Query query = queryParser.parse(queryString);
             int hitsPerPage = 1000;
             IndexReader reader = DirectoryReader.open(index);
