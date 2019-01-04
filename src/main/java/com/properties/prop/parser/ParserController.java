@@ -113,6 +113,7 @@ public class ParserController {
                 if(newValue!=null) {
                     bundleSearchField.setText(newValue.getName());
                     bundleSearchField.positionCaret(newValue.getName().length());
+                    searchBar.clear();
                     changeBundle(newValue);
                 }
             } catch (IOException e) {
