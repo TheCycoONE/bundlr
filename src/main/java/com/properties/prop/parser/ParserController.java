@@ -41,6 +41,16 @@ import java.util.stream.Stream;
 
 @Component
 public class ParserController {
+    private static final String CHOOSE_COLUMN = "Choose column";
+    private static final String FILTER_BUNDLES = "Filter bundles";
+    private static final String ENTER_FILTER_CRITERIA = "Enter filter criteria";
+    private static final String ENTER_SEARCH_TEXT = "Enter search text";
+    private static final String RESET_BUNDLE_FILTER = "Reset bundle filter";
+    private static final String GET_ALL_PROPERTIES = "Get all properties";
+    private static final String DELETE_BUNDLE = "Delete bundle";
+    private static final String SEARCH_PROPERTIES = "Search properties";
+    private static final String CHOOSE_BUNDLE = "Choose bundle";
+
     @FXML private AnchorPane anchorId;
     @FXML private Pane tablePane;
     @FXML private TextField searchBar;
@@ -52,6 +62,7 @@ public class ParserController {
     @FXML private Button allBtn;
     @FXML private Button searchResourcesBtn;
     @FXML private Button deleteBundleBtn;
+    @FXML private ComboBox searchOptionsBox;
 
     private ObservableList<Resource> resources;
     private Bundle currentBundle;
@@ -75,6 +86,15 @@ public class ParserController {
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        bundleBox.setTooltip(new Tooltip(CHOOSE_BUNDLE));
+        searchOptionsBox.setTooltip(new Tooltip(CHOOSE_COLUMN));
+        bundleSearchBtn.setTooltip(new Tooltip(FILTER_BUNDLES));
+        bundleSearchField.setTooltip(new Tooltip(ENTER_FILTER_CRITERIA));
+        searchBar.setTooltip(new Tooltip(ENTER_SEARCH_TEXT));
+        resetFilterBtn.setTooltip(new Tooltip(RESET_BUNDLE_FILTER));
+        allBtn.setTooltip(new Tooltip(GET_ALL_PROPERTIES));
+        deleteBundleBtn.setTooltip(new Tooltip(DELETE_BUNDLE));
+        searchResourcesBtn.setTooltip(new Tooltip(SEARCH_PROPERTIES));
         Callback<ListView<Bundle>,ListCell<Bundle>> cellFactory= new Callback<>() {
             @Override
             public ListCell<Bundle> call(ListView param) {
@@ -173,13 +193,11 @@ public class ParserController {
                 bundleBox.show();
             }
         });
-        parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
-            Comparator<Resource> comparator= (o1, o2) -> o1.getCode().equals("") ? 1
-                    : o2.getCode().equals("") ? -1
-                    : param.getComparator() == null ? 0
-                    : param.getComparator().compare(o1,o2);
-            FXCollections.sort(param.getItems(),comparator);
-            return true;
+        setSortPolicy();
+        searchOptionsBox.setOnKeyPressed(event -> {
+            if(event.getCode()==KeyCode.ENTER){
+                searchOptionsBox.show();
+            }
         });
         parserTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         parserTable.setOnKeyPressed(event -> {
@@ -358,10 +376,11 @@ public class ParserController {
         tablePane.getChildren().remove(parserTable);
         parserTable=new TableView<Resource>();
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        setSortPolicy();
+        parserTable.setEditable(true);
         tablePane.getChildren().add(parserTable);
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
-
         List<String> columnNames=fileMap.keySet().stream().collect(Collectors.toList());
         Collections.sort(columnNames, (o1, o2) -> {
             String s1=o1.substring(o1.length()-5);
@@ -371,6 +390,11 @@ public class ParserController {
             }
             return s1.compareTo(s2);
         });
+        List<String> searchOptions=new ArrayList<>();
+        searchOptions.add("All columns");
+        searchOptions.addAll(columnNames);
+        searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
+        searchOptionsBox.getSelectionModel().select(0);
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
@@ -445,6 +469,17 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
+    }
+
+    private void setSortPolicy() {
+        parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
+            Comparator<Resource> comparator = (o1, o2) -> o1.getCode().equals("") ? 1
+                    : o2.getCode().equals("") ? -1
+                    : param.getComparator() == null ? 0
+                    : param.getComparator().compare(o1, o2);
+            FXCollections.sort(param.getItems(), comparator);
+            return true;
+        });
     }
 
     @FXML private void filterBundles() throws IOException, ParseException {
@@ -554,17 +589,18 @@ public class ParserController {
             String searchString=searchBar.getText();
             String queryString = searchString;
             String[] fieldsArray = getFieldsArray();
+            String searchOption = searchOptionsBox.getSelectionModel().getSelectedItem().toString();
             ObservableList<Resource> searchedResources;
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
                 if(!queryString.equals("")) {
                     String wildcardQueryString = "*" + queryString + "*";
-                    searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), wildcardQueryString, fieldsArray);
+                    searchedResources = searchResources(fieldsArray, searchOption, wildcardQueryString);
                     if (!searchedResources.isEmpty()) {
                         parserTable.setItems(searchedResources);
                         matchFound = true;
                     } else {
-                        searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+                        searchedResources = searchResources(fieldsArray,searchOption,queryString);
                         if (!searchedResources.isEmpty()) {
                             parserTable.setItems(searchedResources);
                             matchFound = true;
@@ -586,13 +622,13 @@ public class ParserController {
                         if (resourceIndexService.storeExists(bundle.getName())) {
                             if(!queryString.equals("")) {
                                 String wildcardQueryString = "*" + queryString + "*";
-                                searchedResources = resourceIndexService.searchIndex(bundle.getName(), wildcardQueryString, bundleFieldsArray);
+                                searchedResources = searchResources(bundleFieldsArray,searchOption,wildcardQueryString);
                                 if (!searchedResources.isEmpty()) {
                                     changeBundle(bundle);
                                     parserTable.setItems(searchedResources);
                                     break;
                                 } else {
-                                    searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
+                                    searchedResources = searchResources(bundleFieldsArray,searchOption,queryString);
                                     if (!searchedResources.isEmpty()) {
                                         changeBundle(bundle);
                                         parserTable.setItems(searchedResources);
@@ -612,6 +648,17 @@ public class ParserController {
             parserTable.getItems().add(new Resource(""));
         }
     }
+
+    private ObservableList<Resource> searchResources(String[] fieldsArray, String searchOption, String queryString) throws ParseException, IOException {
+        ObservableList<Resource> searchedResources;
+        if(searchOption.equals("All columns")) {
+            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+        }else{
+            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, searchOption);
+        }
+        return searchedResources;
+    }
+
     @FXML private void deleteBundle(){
         if(currentBundle!=null) {
             Bundle bundle = (Bundle) bundleBox.getSelectionModel().getSelectedItem();

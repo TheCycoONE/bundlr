@@ -19,5 +19,6 @@ public interface ResourceIndexService {
     void deleteStore(String storeName) throws IOException;
     boolean storeExists(String storeName);
     ObservableList<Resource> searchIndex(String storeName,String queryString, String[] fieldsArray) throws ParseException, IOException;
+    ObservableList<Resource> searchIndex(String storeName,String queryString, String field) throws ParseException, IOException;
     ObservableList<Resource> getAllResources(String storeName) throws IOException;
 }

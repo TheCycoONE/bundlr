@@ -113,6 +113,18 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
         return FXCollections.emptyObservableList();
     }
+
+    @Override
+    public ObservableList<Resource> searchIndex(String storeName, String queryString, String field) throws ParseException, IOException {
+        if(stores.containsKey(storeName)){
+            DocumentStore documentStore = stores.get(storeName);
+            List<Document> documents = documentStore.searchIndex(queryString,field);
+            List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
+            return FXCollections.observableArrayList(resources);
+        }
+        return FXCollections.emptyObservableList();
+    }
+
     @Override
     public ObservableList<Resource> getAllResources(String storeName) throws IOException {
         if(stores.containsKey(storeName)) {

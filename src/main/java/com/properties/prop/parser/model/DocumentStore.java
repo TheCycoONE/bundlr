@@ -105,12 +105,15 @@ public class DocumentStore {
         if(analyzer!=null) {
             MultiFieldQueryParser queryParser = new MultiFieldQueryParser(fieldsArray, analyzer);
             queryParser.setDefaultOperator(QueryParser.Operator.AND);
-            queryParser.setAllowLeadingWildcard(true);
-            queryString= StringUtil.escape(queryString);
-            Query query = queryParser.parse(queryString);
-            int hitsPerPage = 1000;
-            IndexReader reader = DirectoryReader.open(index);
-            return getDocuments(query, hitsPerPage, reader);
+            return getDocuments(queryString, queryParser);
+        }
+        return Collections.emptyList();
+    }
+
+    public List<Document> searchIndex(String queryString,String field) throws ParseException, IOException {
+        if(analyzer!=null) {
+            QueryParser queryParser=new QueryParser(field,analyzer);
+            return getDocuments(queryString, queryParser);
         }
         return Collections.emptyList();
     }
@@ -120,6 +123,14 @@ public class DocumentStore {
         IndexReader reader= DirectoryReader.open(index);
         int numOfDocs=reader.numDocs() !=0 ? reader.numDocs() : 1;
         return getDocuments(query, numOfDocs, reader);
+    }
+    private List<Document> getDocuments(String queryString, QueryParser queryParser) throws ParseException, IOException {
+        queryParser.setAllowLeadingWildcard(true);
+        queryString= StringUtil.escape(queryString);
+        Query query = queryParser.parse(queryString);
+        int hitsPerPage = 1000;
+        IndexReader reader = DirectoryReader.open(index);
+        return getDocuments(query, hitsPerPage, reader);
     }
 
     private List<Document> getDocuments(Query query, int hitsPerPage, IndexReader reader) throws IOException {
