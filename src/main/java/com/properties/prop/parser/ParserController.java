@@ -19,6 +19,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -41,7 +42,7 @@ import java.util.stream.Stream;
 @Component
 public class ParserController {
     @FXML private AnchorPane anchorId;
-    @FXML private TableView parserTable;
+    @FXML private Pane tablePane;
     @FXML private TextField searchBar;
     @FXML private ComboBox bundleBox;
     @FXML private TextField bundleSearchField;
@@ -55,6 +56,7 @@ public class ParserController {
     private ObservableList<Resource> resources;
     private Bundle currentBundle;
     private ObservableList<Bundle> bundles;
+    private TableView parserTable;
 
     @Autowired
     private FileService fileService;
@@ -67,6 +69,12 @@ public class ParserController {
 
     @FXML
     public void initialize() throws IOException, ConfigurationException {
+        parserTable=new TableView<Resource>();
+        parserTable.getColumns().add(new TableColumn<>("code"));
+        tablePane.getChildren().add(parserTable);
+        parserTable.prefWidthProperty().bind(tablePane.widthProperty());
+        parserTable.prefHeightProperty().bind(tablePane.heightProperty());
+        parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         Callback<ListView<Bundle>,ListCell<Bundle>> cellFactory= new Callback<>() {
             @Override
             public ListCell<Bundle> call(ListView param) {
@@ -332,6 +340,7 @@ public class ParserController {
         }
     }
     private void loadData(String storeName) throws IOException, ConfigurationException {
+        parserTable.getItems().clear();
         if(resources!=null) {
             resources.clear();
         }
@@ -345,6 +354,14 @@ public class ParserController {
 
     private void changeColumnNames(Map<String,String> fileMap) {
         parserTable.getColumns().clear();
+        parserTable.getItems().clear();
+        tablePane.getChildren().remove(parserTable);
+        parserTable=new TableView<Resource>();
+        parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tablePane.getChildren().add(parserTable);
+        parserTable.prefWidthProperty().bind(tablePane.widthProperty());
+        parserTable.prefHeightProperty().bind(tablePane.heightProperty());
+
         List<String> columnNames=fileMap.keySet().stream().collect(Collectors.toList());
         Collections.sort(columnNames, (o1, o2) -> {
             String s1=o1.substring(o1.length()-5);
@@ -425,14 +442,8 @@ public class ParserController {
         parserTable.getColumns().addAll(tableColumns);
         int numberOfCols=parserTable.getColumns().size();
         List<TableColumn> columns=(List<TableColumn>)parserTable.getColumns();
-        int index=0;
         for(TableColumn column : columns){
-            if(index!=numberOfCols-1) {
-                column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
-            }else{
-                column.prefWidthProperty().set(parserTable.getWidth()/numberOfCols-16);
-            }
-            index++;
+            column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
     }
 
