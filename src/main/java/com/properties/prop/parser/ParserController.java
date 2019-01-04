@@ -392,6 +392,7 @@ public class ParserController {
         });
         List<String> searchOptions=new ArrayList<>();
         searchOptions.add("All columns");
+        searchOptions.add("code");
         searchOptions.addAll(columnNames);
         searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
         searchOptionsBox.getSelectionModel().select(0);
