@@ -173,14 +173,7 @@ public class ParserController {
                 bundleBox.show();
             }
         });
-        parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
-            Comparator<Resource> comparator= (o1, o2) -> o1.getCode().equals("") ? 1
-                    : o2.getCode().equals("") ? -1
-                    : param.getComparator() == null ? 0
-                    : param.getComparator().compare(o1,o2);
-            FXCollections.sort(param.getItems(),comparator);
-            return true;
-        });
+        setSortPolicy();
         parserTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         parserTable.setOnKeyPressed(event -> {
             if(event.getCode()==KeyCode.DELETE){
@@ -358,6 +351,7 @@ public class ParserController {
         tablePane.getChildren().remove(parserTable);
         parserTable=new TableView<Resource>();
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        setSortPolicy();
         parserTable.setEditable(true);
         tablePane.getChildren().add(parserTable);
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
@@ -446,6 +440,17 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
+    }
+
+    private void setSortPolicy() {
+        parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
+            Comparator<Resource> comparator = (o1, o2) -> o1.getCode().equals("") ? 1
+                    : o2.getCode().equals("") ? -1
+                    : param.getComparator() == null ? 0
+                    : param.getComparator().compare(o1, o2);
+            FXCollections.sort(param.getItems(), comparator);
+            return true;
+        });
     }
 
     @FXML private void filterBundles() throws IOException, ParseException {
