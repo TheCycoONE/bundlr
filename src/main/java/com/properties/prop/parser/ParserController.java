@@ -358,6 +358,7 @@ public class ParserController {
         tablePane.getChildren().remove(parserTable);
         parserTable=new TableView<Resource>();
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        parserTable.setEditable(true);
         tablePane.getChildren().add(parserTable);
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
