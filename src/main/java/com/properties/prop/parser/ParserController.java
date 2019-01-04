@@ -564,13 +564,13 @@ public class ParserController {
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
                 if(!queryString.equals("")) {
-                    searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+                    String wildcardQueryString = "*" + queryString + "*";
+                    searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), wildcardQueryString, fieldsArray);
                     if (!searchedResources.isEmpty()) {
                         parserTable.setItems(searchedResources);
                         matchFound = true;
                     } else {
-                        String wildcardQueryString = "*" + queryString + "*";
-                        searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), wildcardQueryString, fieldsArray);
+                        searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
                         if (!searchedResources.isEmpty()) {
                             parserTable.setItems(searchedResources);
                             matchFound = true;
@@ -591,14 +591,14 @@ public class ParserController {
                         String[] bundleFieldsArray =bundle.getFileMap().keySet().toArray(String[]::new);
                         if (resourceIndexService.storeExists(bundle.getName())) {
                             if(!queryString.equals("")) {
-                                searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
+                                String wildcardQueryString = "*" + queryString + "*";
+                                searchedResources = resourceIndexService.searchIndex(bundle.getName(), wildcardQueryString, bundleFieldsArray);
                                 if (!searchedResources.isEmpty()) {
                                     changeBundle(bundle);
                                     parserTable.setItems(searchedResources);
                                     break;
                                 } else {
-                                    String wildcardQueryString = "*" + queryString + "*";
-                                    searchedResources = resourceIndexService.searchIndex(bundle.getName(), wildcardQueryString, bundleFieldsArray);
+                                    searchedResources = resourceIndexService.searchIndex(bundle.getName(), queryString, bundleFieldsArray);
                                     if (!searchedResources.isEmpty()) {
                                         changeBundle(bundle);
                                         parserTable.setItems(searchedResources);
