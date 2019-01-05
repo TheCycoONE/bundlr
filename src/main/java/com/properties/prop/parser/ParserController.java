@@ -35,6 +35,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -250,13 +252,12 @@ public class ParserController {
     private void changeBundle(Bundle bundle) throws IOException, ConfigurationException {
         currentBundle=bundle;
         if(bundle.getFileMap().isEmpty()) {
-            File file = new File(bundle.getPath());
-            updateStoreUI(file, bundle);
+            updateStoreUI(bundle);
         }else {
             changeColumnNames(bundle.getFileMap());
             loadData(bundle.getName());
         }
-        bundleBox.getSelectionModel().select(bundles.indexOf(bundle));
+        bundleBox.getSelectionModel().select(bundle);
         bundleSearchField.setText(bundle.getName());
         bundleSearchField.positionCaret(bundle.getName().length());
     }
@@ -275,7 +276,9 @@ public class ParserController {
             File file=new File(bundle.getPath());
             File[] fileArray=file.listFiles();
             if(fileArray!=null) {
-                List<File> files = Arrays.asList(fileArray);
+                List<File> files = Arrays.stream(fileArray) //
+                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                        .collect(Collectors.toList());
                 resources = fileService.loadRowData(files);
                 Map<String,String> fileMap=new LinkedHashMap<>();
                 for(File currentFile : files){
@@ -288,15 +291,19 @@ public class ParserController {
         }
     }
 
-    private void updateStoreUI(File file,Bundle bundle) throws IOException, ConfigurationException {
+    private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException {
         Map<String,String> fileMap=bundle.getFileMap();
+        File file=new File(bundle.getPath());
+        String bundleName=bundle.getName();
         if(fileMap.isEmpty()){
             if (file != null) {
                 File[] fileArray = file.listFiles();
                 if (fileArray != null) {
-                    List<File> files = Arrays.asList(fileArray);
+                    List<File> files = Arrays.stream(fileArray) //
+                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
+                            .collect(Collectors.toList());
                     try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
-                        updateFileMap(fileMap, paths);
+                        updateFileMap(bundle.getName(),fileMap, paths);
                         changeColumnNames(fileMap);
                         loadData(bundle.getName(), files);
                     }
@@ -305,10 +312,11 @@ public class ParserController {
         }
     }
 
-    private void updateFileMap(Map<String, String> fileMap, Stream<Path> paths) {
+    private void updateFileMap(String bundleName,Map<String, String> fileMap, Stream<Path> paths) {
         List<Path> pathList = paths
                 .filter(Files::isRegularFile)
-                .filter((filePath) -> FilenameUtils.getExtension(filePath.toString()).equals("properties"))
+                .filter(filePath -> FilenameUtils.getBaseName(filePath.toString()).startsWith(bundleName))
+                .filter(filePath -> FilenameUtils.getExtension(filePath.toString()).equals("properties"))
                 .collect(Collectors.toList());
         for (Path path : pathList) {
             fileMap.put(FilenameUtils.getBaseName(path.toString()), path.toString());
@@ -323,7 +331,7 @@ public class ParserController {
                 if (fileArray != null) {
                     List<File> files = Arrays.asList(fileArray);
                     try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
-                        updateFileMap(fileMap, paths);
+                        updateFileMap(bundle.getName(),fileMap, paths);
                         addResourcesToStore(bundle.getName(),files);
                     }
                 }
@@ -518,16 +526,12 @@ public class ParserController {
         Stage stage= (Stage) anchorId.getScene().getWindow();
         File file=directoryChooser.showDialog(stage);
         if(file!=null) {
-            if (isBundle(file)) {
-                String storeName = FilenameUtils.getBaseName(file.getName());
-                boolean bundleExists = bundles.stream().anyMatch(bundle -> bundle.getName().equals(storeName));
-                if(!bundleExists) {
-                    processSingleBundleDirectory(file,storeName);
-                }
+            if (containsBundles(file)) {
+                processSingleBundleDirectory(file);
             } else {
                 File[] subFiles = file.listFiles();
                 for (File subFile : subFiles) {
-                    if (isBundle(subFile)) {
+                    if (containsBundles(subFile)) {
                         String storeName = FilenameUtils.getBaseName(subFile.getName());
                         boolean bundleExists = bundles.stream().anyMatch(bundle -> bundle.getName().equals(storeName));
                         if(!bundleExists) {
@@ -540,17 +544,40 @@ public class ParserController {
         }
     }
 
-    private boolean isBundle(File file) throws IOException {
+    private boolean containsBundles(File file) throws IOException {
         return Arrays.asList(file.listFiles())
                 .stream() //
                 .allMatch(subFile -> subFile.isFile()&& FilenameUtils.getExtension(subFile.getPath()).equals("properties")); //
     }
 
-    private void processSingleBundleDirectory(File file,String storeName) throws IOException, ConfigurationException {
+    private void processSingleBundleDirectory(File file) throws IOException, ConfigurationException {
         if(file!=null) {
-            setCurrentBundle(file, storeName);
-            updateStoreUI(file, currentBundle);
+            File[] subFiles=file.listFiles();
+            if(subFiles!=null) {
+                List<Bundle> fileBundles = Arrays.stream(subFiles) //
+                        .filter(Predicate.not(subFile -> bundlesExist(getBundleName(subFile)))) //
+                        .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
+                        .filter(distinctByKey(Bundle::getName))//
+                        .collect(Collectors.toList());
+                bundles.addAll(fileBundles);
+                FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
+                bundleBox.setItems(bundles);
+                bundleService.addBundles(fileBundles);
+                currentBundle=fileBundles.get(0);
+                bundleBox.getSelectionModel().select(currentBundle);
+            }
         }
+    }
+    public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        Set<Object> seen = ConcurrentHashMap.newKeySet();
+        return t -> seen.add(keyExtractor.apply(t));
+    }
+    private String getBundleName(File file){
+        String name=FilenameUtils.getBaseName(file.getPath());
+        return name.substring(0,name.length()-6);
+    }
+    private boolean bundlesExist(String name){
+        return bundles.stream().anyMatch(bundle -> bundle.getName().equals(name));
     }
 
     private void setCurrentBundle(File file, String storeName) throws IOException {

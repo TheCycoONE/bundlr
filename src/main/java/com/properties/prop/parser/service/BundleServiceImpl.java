@@ -36,6 +36,10 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
         Document document=bundleDocumentConverter.convertToDocument(bundle);
         bundleStore.addDocument(document);
     }
+    public void addBundles(List<Bundle> bundles) throws IOException {
+        List<Document> documents=bundleDocumentConverter.convertAllToDocument(bundles);
+        bundleStore.addDocuments(documents);
+    }
 
     public void deleteBundle(Bundle bundle) throws IOException {
         bundleStore.deleteDocument("id",bundle.getId());
