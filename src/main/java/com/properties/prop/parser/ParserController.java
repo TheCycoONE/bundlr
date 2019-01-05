@@ -261,6 +261,16 @@ public class ParserController {
         bundleSearchField.positionCaret(bundle.getName().length());
     }
     private void updateIndexes() throws IOException, ConfigurationException {
+        Iterator<Bundle> bundleIterator=bundles.listIterator();
+        while (bundleIterator.hasNext()){
+            Bundle bundle=bundleIterator.next();
+            Path path=Paths.get(bundle.getPath());
+            if(Files.notExists(path)){
+                resourceIndexService.deleteStore(bundle.getName());
+                bundleService.deleteBundle(bundle);
+                bundleIterator.remove();
+            }
+        }
         for(Bundle bundle : bundles){
             File file=new File(bundle.getPath());
             File[] fileArray=file.listFiles();
@@ -521,7 +531,7 @@ public class ParserController {
                         String storeName = FilenameUtils.getBaseName(subFile.getName());
                         boolean bundleExists = bundles.stream().anyMatch(bundle -> bundle.getName().equals(storeName));
                         if(!bundleExists) {
-                            processBundleDirectory(subFile,storeName);
+                            processBundleDirectories(subFile,storeName);
                         }
                     }
                 }
@@ -551,7 +561,7 @@ public class ParserController {
         bundleService.addBundle(currentBundle);
     }
 
-    private void processBundleDirectory(File file,String storeName) throws IOException, ConfigurationException {
+    private void processBundleDirectories(File file,String storeName) throws IOException, ConfigurationException {
         if(file!=null) {
             setCurrentBundle(file, storeName);
             loadBundleDataInIndex(file,currentBundle);
