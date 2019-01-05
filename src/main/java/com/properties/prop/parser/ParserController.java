@@ -563,8 +563,7 @@ public class ParserController {
                 FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
                 bundleBox.setItems(bundles);
                 bundleService.addBundles(fileBundles);
-                currentBundle=fileBundles.get(0);
-                bundleBox.getSelectionModel().select(currentBundle);
+                bundleBox.getSelectionModel().select(fileBundles.get(0));
             }
         }
     }
@@ -581,11 +580,11 @@ public class ParserController {
     }
 
     private void setCurrentBundle(File file, String storeName) throws IOException {
-        currentBundle = new Bundle(storeName, file.getAbsolutePath());
-        bundles.add(currentBundle);
+        Bundle bundle = new Bundle(storeName, file.getAbsolutePath());
+        bundles.add(bundle);
         bundleBox.setItems(bundles);
-        bundleBox.getSelectionModel().select(bundles.indexOf(currentBundle));
-        bundleService.addBundle(currentBundle);
+        bundleBox.getSelectionModel().select(bundle);
+        bundleService.addBundle(bundle);
     }
 
     private void processBundleDirectories(File file,String storeName) throws IOException, ConfigurationException {
