@@ -549,16 +549,15 @@ public class ParserController {
     private void processSingleBundleDirectory(File file,String storeName) throws IOException, ConfigurationException {
         if(file!=null) {
             setCurrentBundle(file, storeName);
-            updateStoreUI(file, currentBundle);
         }
     }
 
     private void setCurrentBundle(File file, String storeName) throws IOException {
-        currentBundle = new Bundle(storeName, file.getAbsolutePath());
-        bundles.add(currentBundle);
+        Bundle bundle = new Bundle(storeName, file.getAbsolutePath());
+        bundles.add(bundle);
         bundleBox.setItems(bundles);
-        bundleBox.getSelectionModel().select(bundles.indexOf(currentBundle));
-        bundleService.addBundle(currentBundle);
+        bundleBox.getSelectionModel().select(bundle);
+        bundleService.addBundle(bundle);
     }
 
     private void processBundleDirectories(File file,String storeName) throws IOException, ConfigurationException {
