@@ -543,7 +543,7 @@ public class ParserController {
     private boolean isBundle(File file) throws IOException {
         return Arrays.asList(file.listFiles())
                 .stream() //
-                .allMatch(subFile -> subFile.isFile()&& FilenameUtils.getExtension(subFile.getPath()).equals("properties")); //
+                .anyMatch(subFile -> subFile.isFile()&& FilenameUtils.getExtension(subFile.getPath()).equals("properties")); //
     }
 
     private void processSingleBundleDirectory(File file,String storeName) throws IOException, ConfigurationException {
