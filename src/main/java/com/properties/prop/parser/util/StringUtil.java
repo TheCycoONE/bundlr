@@ -23,12 +23,23 @@ public class StringUtil {
         }else  if(x.equalsIgnoreCase(y)){
             return 3d;
         }else if(x.contains(y)){
-            return 2d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
+            return 2d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1d;
         }else if(StringUtils.containsIgnoreCase(x,y)){
-            return 1d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
+            return 1d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1d;
         }else {
-            return x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
+            double numberOfContainedStrings=numberOfContainedStrings(x,y);
+            return numberOfContainedStrings != 0d ? 1d-1d/numberOfContainedStrings : 1d;
         }
+    }
+    private static double numberOfContainedStrings(String x,String y){
+        String[] tokens=y.split("\\\\s+|,+|.+");
+        double number=0d;
+        for(String token : tokens){
+            if(x.contains(token)){
+                number++;
+            }
+        }
+        return number;
     }
 
 }
