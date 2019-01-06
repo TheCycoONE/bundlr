@@ -1,5 +1,7 @@
 package com.properties.prop.parser.util;
 
+import org.apache.commons.lang.StringUtils;
+
 public class StringUtil {
     public static String escape(String s) {
         StringBuilder sb = new StringBuilder();
@@ -15,4 +17,14 @@ public class StringUtil {
         }
         return sb.toString();
     }
+    public static double similarity(String x,String y){
+        if(x.equals(y)){
+            return 2d;
+        }else if(StringUtils.containsIgnoreCase(x,y)){
+            return 1d + 1d/Math.abs(x.length()-y.length());
+        }else {
+            return 1d /Math.abs(x.length()-y.length());
+        }
+    }
+
 }

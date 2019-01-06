@@ -2,10 +2,7 @@ package com.properties.prop.parser.util;
 
 import com.properties.prop.parser.model.Resource;
 import javafx.beans.property.SimpleStringProperty;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.springframework.stereotype.Component;
@@ -22,6 +19,7 @@ public class ResourceDocumentConverter {
         document.add(new TextField("code",resource.getCode(), Field.Store.YES));
         for(Map.Entry<String, SimpleStringProperty> entry : resource.keyValuePairs()){
             document.add(new TextField(entry.getKey(),entry.getValue().get(),Field.Store.YES));
+            document.add(new NumericDocValuesField("size-"+entry.getKey(),entry.getValue().get().length()));
         }
         FieldType fieldType=new FieldType();
         fieldType.setStored(true);

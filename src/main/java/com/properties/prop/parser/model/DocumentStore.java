@@ -5,7 +5,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
-import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
@@ -54,9 +53,14 @@ public class DocumentStore {
             FileUtils.deleteDirectory(new File(indexLocation));
         }
     }
-    public void addDocuments(List<Document> documents) throws IOException {
+    public void reloadDocuments(List<Document> documents) throws IOException {
         if(analyzer!=null) {
             clearAll();
+            addDocuments(documents);
+        }
+    }
+    public void addDocuments(List<Document> documents)throws IOException {
+        if(analyzer!=null) {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(index, config);
             for (Document document : documents) {
@@ -101,11 +105,39 @@ public class DocumentStore {
             deleteDocument(key,value);
         }
     }
-    public List<Document> searchIndex(String queryString, String[] fieldsArray) throws ParseException, IOException {
+    public List<Document> searchIndex(String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
+        List<Document> documents=Collections.emptyList();
         if(analyzer!=null) {
-            MultiFieldQueryParser queryParser = new MultiFieldQueryParser(fieldsArray, analyzer);
+            for(String field : fieldsArray) {
+                documents=searchIndex(queryString,field,notSortedWord);
+                if(!documents.isEmpty()){
+                    break;
+                }
+            }
+        }
+        return documents;
+    }
+
+    public List<Document> searchIndex(String queryString,String field,String notSortedWord) throws ParseException, IOException {
+        if(analyzer!=null) {
+            QueryParser queryParser=new QueryParser(field,analyzer);
             queryParser.setDefaultOperator(QueryParser.Operator.AND);
-            return getDocuments(queryString, queryParser);
+            List<Document> documents=getDocuments(field,queryString, queryParser);
+            String strippedQueryString = queryString.replaceAll("\\*", "");
+            if(!field.equals(notSortedWord)&&!documents.isEmpty()) {
+                Collections.sort(documents, (o1, o2) -> {
+                    double sim1 = StringUtil.similarity(o1.get(field), strippedQueryString);
+                    double sim2 = StringUtil.similarity(o2.get(field), strippedQueryString);
+                    if (sim1 == sim2) {
+                        return 0;
+                    } else if (sim1 > sim2) {
+                        return -1;
+                    } else {
+                        return 1;
+                    }
+                });
+            }
+            return documents;
         }
         return Collections.emptyList();
     }
@@ -113,7 +145,9 @@ public class DocumentStore {
     public List<Document> searchIndex(String queryString,String field) throws ParseException, IOException {
         if(analyzer!=null) {
             QueryParser queryParser=new QueryParser(field,analyzer);
-            return getDocuments(queryString, queryParser);
+            queryParser.setDefaultOperator(QueryParser.Operator.AND);
+            List<Document> documents=getDocuments(field,queryString, queryParser);
+            return documents;
         }
         return Collections.emptyList();
     }
@@ -122,20 +156,28 @@ public class DocumentStore {
         Query query=new MatchAllDocsQuery();
         IndexReader reader= DirectoryReader.open(index);
         int numOfDocs=reader.numDocs() !=0 ? reader.numDocs() : 1;
-        return getDocuments(query, numOfDocs, reader);
-    }
-    private List<Document> getDocuments(String queryString, QueryParser queryParser) throws ParseException, IOException {
-        queryParser.setAllowLeadingWildcard(true);
-        queryString= StringUtil.escape(queryString);
-        Query query = queryParser.parse(queryString);
-        int hitsPerPage = 1000;
-        IndexReader reader = DirectoryReader.open(index);
-        return getDocuments(query, hitsPerPage, reader);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        return getDocuments(query, numOfDocs,reader,searcher);
     }
 
-    private List<Document> getDocuments(Query query, int hitsPerPage, IndexReader reader) throws IOException {
+    private List<Document> getDocuments(String field,Query query, int hitsPerPage, IndexReader reader) throws IOException {
         IndexSearcher searcher = new IndexSearcher(reader);
-        TopDocs docs = searcher.search(query, hitsPerPage);
+        SortField sortField=new SortedNumericSortField("size-"+field, SortField.Type.LONG,false);
+        Sort sort=new Sort(sortField);
+        TopDocs docs = searcher.search(query, hitsPerPage, sort);
+        return getDocuments(reader, searcher, docs);
+    }
+
+    private List<Document> getDocuments(String field,String queryString, QueryParser queryParser) throws ParseException, IOException {
+        queryParser.setAllowLeadingWildcard(true);
+        queryString = StringUtil.escape(queryString);
+        Query query=queryParser.parse(queryString);
+        int hitsPerPage = 1000;
+        IndexReader reader = DirectoryReader.open(index);
+        return getDocuments(field,query, hitsPerPage, reader);
+    }
+
+    private List<Document> getDocuments(IndexReader reader, IndexSearcher searcher, TopDocs docs) throws IOException {
         ScoreDoc[] hits = docs.scoreDocs;
         List<Document> documents = new ArrayList<>();
         for (ScoreDoc hit : hits) {
@@ -144,6 +186,11 @@ public class DocumentStore {
         }
         reader.close();
         return documents;
+    }
+
+    private List<Document> getDocuments(Query query, int hitsPerPage, IndexReader reader, IndexSearcher searcher) throws IOException {
+        TopDocs docs = searcher.search(query, hitsPerPage);
+        return getDocuments(reader, searcher, docs);
     }
 
 }

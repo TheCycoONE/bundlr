@@ -121,20 +121,19 @@ public class ParserController {
 
         try {
             bundles=bundleService.loadBundles();
+            FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
             resourceIndexService.loadStores(bundles.stream().map(Bundle::getName).collect(Collectors.toList()));
             updateIndexes();
         } catch (IOException e) {
             bundles = FXCollections.observableArrayList();
         }
-        bundleBox.getItems().addAll(bundles);
+        bundleBox.setItems(bundles);
         if(!bundles.isEmpty()){
             changeBundle(bundles.get(0));
         }
         bundleBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Bundle>) (observable, oldValue, newValue) -> {
             try {
                 if(newValue!=null) {
-                    bundleSearchField.setText(newValue.getName());
-                    bundleSearchField.positionCaret(newValue.getName().length());
                     changeBundle(newValue);
                 }
             } catch (IOException e) {
@@ -145,7 +144,11 @@ public class ParserController {
         });
         bundleBox.getSelectionModel().select(0);
         bundleSearchField.setOnKeyPressed(event -> {
-            triggerFilterBundles(event);
+            try {
+                triggerFilterBundles(event);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
         searchBar.setOnKeyPressed(event -> {
             triggerSearchFile(event);
@@ -170,7 +173,11 @@ public class ParserController {
             }
         });
         bundleSearchBtn.setOnKeyPressed(event -> {
-            triggerFilterBundles(event);
+            try {
+                triggerFilterBundles(event);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
         resetFilterBtn.setOnKeyPressed(event -> {
             if(event.getCode() == KeyCode.ENTER){
@@ -237,10 +244,14 @@ public class ParserController {
         }
     }
 
-    private void triggerFilterBundles(KeyEvent event) {
+    private void triggerFilterBundles(KeyEvent event) throws IOException {
         if (event.getCode() == KeyCode.ENTER) {
             try {
-                filterBundles();
+                if(bundleSearchField.getText().equals("")){
+                    resetFilter();
+                }else {
+                    filterBundles();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ParseException e) {
@@ -258,8 +269,6 @@ public class ParserController {
             loadData(bundle.getName());
         }
         bundleBox.getSelectionModel().select(bundle);
-        bundleSearchField.setText(bundle.getName());
-        bundleSearchField.positionCaret(bundle.getName().length());
     }
     private void updateIndexes() throws IOException, ConfigurationException {
         Iterator<Bundle> bundleIterator=bundles.listIterator();
@@ -286,7 +295,7 @@ public class ParserController {
                 }
                 bundle.setFileMap(fileMap);
                 resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(),fileMap.keySet());
-                resourceIndexService.addDocuments(bundle.getName(), resources);
+                resourceIndexService.reloadDocuments(bundle.getName(), resources);
             }
         }
     }
@@ -323,21 +332,26 @@ public class ParserController {
         }
     }
 
-    private void loadBundleDataInIndex(File file,Bundle bundle) throws IOException, ConfigurationException {
+    private void processBundleWithoutUI(Bundle bundle) throws IOException, ConfigurationException {
         Map<String,String> fileMap=bundle.getFileMap();
+        File file=new File(bundle.getPath());
+        String bundleName=bundle.getName();
         if(fileMap.isEmpty()){
             if (file != null) {
                 File[] fileArray = file.listFiles();
                 if (fileArray != null) {
-                    List<File> files = Arrays.asList(fileArray);
+                    List<File> files = Arrays.stream(fileArray) //
+                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
+                            .collect(Collectors.toList());
                     try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
                         updateFileMap(bundle.getName(),fileMap, paths);
-                        addResourcesToStore(bundle.getName(),files);
+                        addResourcesToIndex(bundle,files);
                     }
                 }
             }
         }
     }
+
     private void clearParseTable(){
         ObservableList<TableColumn> columns=(ObservableList<TableColumn>)parserTable.getColumns();
         columns.removeIf(tableColumn -> !tableColumn.getText().equals("code"));
@@ -345,10 +359,21 @@ public class ParserController {
     }
 
     private String[] getFieldsArray() {
-        List<String> fields = new ArrayList<>();
+        List<String> fields= new ArrayList<>(currentBundle.getFileMap().keySet());
+        sortFields(fields);
         fields.add("code");
-        fields.addAll(currentBundle.getFileMap().keySet());
         return fields.toArray(String[]::new);
+    }
+
+    private void sortFields(List<String> fields) {
+        Collections.sort(fields, (o1, o2) -> {
+            String s1 = o1.substring(o1.length() - 5);
+            String s2 = o2.substring(o2.length() - 5);
+            if (s1.equals(s2)) {
+                return 0;
+            }
+            return s1.compareTo(s2);
+        });
     }
 
     private void loadData(String storeName,List<File> files) throws IOException, ConfigurationException {
@@ -359,7 +384,7 @@ public class ParserController {
             resourceIndexService.createStore(storeName);
             resourceIndexService.createLanguageBasedAnalyzer(storeName,currentBundle.getFileMap().keySet());
             resources=fileService.loadRowData(files);
-            resourceIndexService.addDocuments(storeName,resources);
+            resourceIndexService.reloadDocuments(storeName,resources);
         }else {
             resourceIndexService.createLanguageBasedAnalyzer(storeName,currentBundle.getFileMap().keySet());
             resources=resourceIndexService.getAllResources(storeName);
@@ -367,14 +392,16 @@ public class ParserController {
         parserTable.setItems(resources);
         parserTable.getItems().add(new Resource(""));
     }
-    private void addResourcesToStore(String storeName,List<File> files) throws IOException, ConfigurationException {
+    private void addResourcesToIndex(Bundle bundle,List<File> files) throws IOException, ConfigurationException {
+        String storeName=bundle.getName();
         if(!resourceIndexService.storeExists(storeName)){
             resourceIndexService.createStore(storeName);
-            resourceIndexService.createLanguageBasedAnalyzer(storeName,currentBundle.getFileMap().keySet());
-            ObservableList<Resource> resources=fileService.loadRowData(files);
-            resourceIndexService.addDocuments(storeName,resources);
+            resourceIndexService.createLanguageBasedAnalyzer(storeName,bundle.getFileMap().keySet());
+            List<Resource> resources=fileService.loadRowData(files);
+            resourceIndexService.reloadDocuments(storeName,resources);
         }
     }
+
     private void loadData(String storeName) throws IOException, ConfigurationException {
         parserTable.getItems().clear();
         if(resources!=null) {
@@ -399,15 +426,8 @@ public class ParserController {
         tablePane.getChildren().add(parserTable);
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
-        List<String> columnNames=fileMap.keySet().stream().collect(Collectors.toList());
-        Collections.sort(columnNames, (o1, o2) -> {
-            String s1=o1.substring(o1.length()-5);
-            String s2=o2.substring(o2.length()-5);
-            if (s1.equals(s2)) {
-                return 0;
-            }
-            return s1.compareTo(s2);
-        });
+        List<String> columnNames= new ArrayList<>(fileMap.keySet());
+        sortFields(columnNames);
         List<String> searchOptions=new ArrayList<>();
         searchOptions.add("All columns");
         searchOptions.add("code");
@@ -508,15 +528,11 @@ public class ParserController {
             if (queryString.equals("")) {
                 queryString = "*:*";
             } else {
-                queryString = "*" + queryString + "*";
+                queryString = queryString + "*";
             }
             searchedBundles = bundleService.searchBundles(queryString);
             if (!searchedBundles.isEmpty()) {
-                bundleBox.getItems().clear();
-                bundles=searchedBundles;
-                bundleBox.setItems(searchedBundles);
-                bundleBox.getSelectionModel().select(0);
-                bundleBox.show();
+                updateBundleBox(searchedBundles);
             }
         }
     }
@@ -532,11 +548,7 @@ public class ParserController {
                 File[] subFiles = file.listFiles();
                 for (File subFile : subFiles) {
                     if (containsBundles(subFile)) {
-                        String storeName = FilenameUtils.getBaseName(subFile.getName());
-                        boolean bundleExists = bundles.stream().anyMatch(bundle -> bundle.getName().equals(storeName));
-                        if(!bundleExists) {
-                            processBundleDirectories(subFile,storeName);
-                        }
+                        processBundleDirectory(subFile);
                     }
                 }
                 changeBundle(bundles.get(0));
@@ -547,26 +559,33 @@ public class ParserController {
     private boolean containsBundles(File file) throws IOException {
         return Arrays.asList(file.listFiles())
                 .stream() //
-                .allMatch(subFile -> subFile.isFile()&& FilenameUtils.getExtension(subFile.getPath()).equals("properties")); //
+                .anyMatch(subFile -> subFile.isFile()&& FilenameUtils.getExtension(subFile.getPath()).equals("properties")); //
     }
 
     private void processSingleBundleDirectory(File file) throws IOException, ConfigurationException {
         if(file!=null) {
             File[] subFiles=file.listFiles();
             if(subFiles!=null) {
-                List<Bundle> fileBundles = Arrays.stream(subFiles) //
-                        .filter(Predicate.not(subFile -> bundlesExist(getBundleName(subFile)))) //
-                        .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
-                        .filter(distinctByKey(Bundle::getName))//
-                        .collect(Collectors.toList());
-                bundles.addAll(fileBundles);
-                FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
-                bundleBox.setItems(bundles);
-                bundleService.addBundles(fileBundles);
+                List<Bundle> fileBundles = getBundles(file, subFiles);
                 bundleBox.getSelectionModel().select(fileBundles.get(0));
             }
         }
     }
+
+    private List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
+        List<Bundle> fileBundles = Arrays.stream(subFiles)
+                .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
+                .filter(Predicate.not(subFile -> bundlesExist(getBundleName(subFile)))) //
+                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
+                .filter(distinctByKey(Bundle::getName))//
+                .collect(Collectors.toList());
+        bundles.addAll(fileBundles);
+        FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+        bundleBox.setItems(bundles);
+        bundleService.addBundles(fileBundles);
+        return fileBundles;
+    }
+
     public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
         Set<Object> seen = ConcurrentHashMap.newKeySet();
         return t -> seen.add(keyExtractor.apply(t));
@@ -579,18 +598,17 @@ public class ParserController {
         return bundles.stream().anyMatch(bundle -> bundle.getName().equals(name));
     }
 
-    private void setCurrentBundle(File file, String storeName) throws IOException {
-        Bundle bundle = new Bundle(storeName, file.getAbsolutePath());
-        bundles.add(bundle);
-        bundleBox.setItems(bundles);
-        bundleBox.getSelectionModel().select(bundle);
-        bundleService.addBundle(bundle);
-    }
-
-    private void processBundleDirectories(File file,String storeName) throws IOException, ConfigurationException {
+    private void processBundleDirectory(File file) throws IOException, ConfigurationException {
         if(file!=null) {
-            setCurrentBundle(file, storeName);
-            loadBundleDataInIndex(file,currentBundle);
+            if(file!=null) {
+                File[] subFiles=file.listFiles();
+                if(subFiles!=null) {
+                    List<Bundle> fileBundles = getBundles(file, subFiles);
+                    for(Bundle bundle : fileBundles){
+                        processBundleWithoutUI(bundle);
+                    }
+                }
+            }
         }
     }
 
@@ -599,13 +617,18 @@ public class ParserController {
             ObservableList<Bundle> searchedBundles = bundleService.loadBundles();
             if (!searchedBundles.isEmpty()) {
                 bundleSearchField.clear();
-                bundleBox.getItems().clear();
-                bundles=searchedBundles;
-                bundleBox.setItems(searchedBundles);
-                bundleBox.getSelectionModel().select(0);
-                bundleBox.show();
+                updateBundleBox(searchedBundles);
             }
         }
+    }
+
+    private void updateBundleBox(ObservableList<Bundle> searchedBundles) {
+        bundleBox.getItems().clear();
+        bundles=searchedBundles;
+        FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+        bundleBox.setItems(searchedBundles);
+        bundleBox.getSelectionModel().select(0);
+        bundleBox.show();
     }
 
     @FXML private void getAllResources() throws IOException {
@@ -689,9 +712,9 @@ public class ParserController {
     private ObservableList<Resource> searchResources(String[] fieldsArray, String searchOption, String queryString) throws ParseException, IOException {
         ObservableList<Resource> searchedResources;
         if(searchOption.equals("All columns")) {
-            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray);
+            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray,"code");
         }else{
-            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, searchOption);
+            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, searchOption,"code");
         }
         return searchedResources;
     }

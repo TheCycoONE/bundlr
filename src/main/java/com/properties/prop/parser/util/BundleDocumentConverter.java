@@ -1,10 +1,7 @@
 package com.properties.prop.parser.util;
 
 import com.properties.prop.parser.model.Bundle;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.FieldType;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.springframework.stereotype.Component;
@@ -20,6 +17,7 @@ public class BundleDocumentConverter {
     public Document convertToDocument(Bundle bundle){
         Document document=new Document();
         document.add(new TextField("name",bundle.getName(), Field.Store.YES));
+        document.add(new NumericDocValuesField("size-name",bundle.getName().length()));
         document.add(new TextField("path",bundle.getPath(), Field.Store.YES));
         Set<Map.Entry<String,String>> fileEntries=bundle.getFileMap().entrySet();
         for(Map.Entry<String,String> entry : fileEntries){

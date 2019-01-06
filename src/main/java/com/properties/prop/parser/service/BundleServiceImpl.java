@@ -50,7 +50,7 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
         return  FXCollections.observableArrayList(bundleDocumentConverter.convertAllToBundle(documents));
     }
     public ObservableList<Bundle> searchBundles(String queryString) throws ParseException, IOException {
-        List<Document> documents = bundleStore.searchIndex(queryString,new String[]{"name"});
+        List<Document> documents = bundleStore.searchIndex(queryString,"name");
         List<Bundle> bundles = bundleDocumentConverter.convertAllToBundle(documents);
         return FXCollections.observableArrayList(bundles);
     }

@@ -59,11 +59,11 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public void addDocuments(String storeName, List<Resource> resources) throws IOException {
+    public void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
         if(stores.containsKey(storeName)){
             List<Document> documents=resourceDocumentConverter.convertAllToDocument(resources);
             DocumentStore documentStore=stores.get(storeName);
-            documentStore.addDocuments(documents);
+            documentStore.reloadDocuments(documents);
         }
     }
     @Override
@@ -104,10 +104,10 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public ObservableList<Resource> searchIndex(String storeName,String queryString, String[] fieldsArray) throws ParseException, IOException {
+    public ObservableList<Resource> searchIndex(String storeName,String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
         if(stores.containsKey(storeName)) {
             DocumentStore documentStore = stores.get(storeName);
-            List<Document> documents = documentStore.searchIndex(queryString,fieldsArray);
+            List<Document> documents = documentStore.searchIndex(queryString,fieldsArray,notSortedWord);
             List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
             return FXCollections.observableArrayList(resources);
         }
@@ -115,10 +115,10 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
     }
 
     @Override
-    public ObservableList<Resource> searchIndex(String storeName, String queryString, String field) throws ParseException, IOException {
+    public ObservableList<Resource> searchIndex(String storeName, String queryString, String field,String notSortedWord) throws ParseException, IOException {
         if(stores.containsKey(storeName)){
             DocumentStore documentStore = stores.get(storeName);
-            List<Document> documents = documentStore.searchIndex(queryString,field);
+            List<Document> documents = documentStore.searchIndex(queryString,field,notSortedWord);
             List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
             return FXCollections.observableArrayList(resources);
         }
