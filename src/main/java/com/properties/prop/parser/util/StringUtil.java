@@ -23,11 +23,11 @@ public class StringUtil {
         }else  if(x.equalsIgnoreCase(y)){
             return 3d;
         }else if(x.contains(y)){
-            return 2d + 1d/Math.abs(x.length()-y.length());
+            return 2d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
         }else if(StringUtils.containsIgnoreCase(x,y)){
-            return 1d + 1d/Math.abs(x.length()-y.length());
+            return 1d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
         }else {
-            return 1d /Math.abs(x.length()-y.length());
+            return x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 1;
         }
     }
 
