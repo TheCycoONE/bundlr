@@ -148,7 +148,7 @@ public class DocumentStore {
     public List<Document> searchIndex(String queryString,String field) throws ParseException, IOException {
         if(analyzer!=null) {
             QueryParser queryParser=new QueryParser(field,analyzer);
-            queryParser.setDefaultOperator(QueryParser.Operator.AND);
+            queryParser.setDefaultOperator(QueryParser.Operator.OR);
             List<Document> documents=getDocuments(field,queryString, queryParser);
             return documents;
         }
