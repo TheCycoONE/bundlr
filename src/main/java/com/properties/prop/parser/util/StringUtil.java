@@ -19,16 +19,19 @@ public class StringUtil {
     }
     public static double similarity(String x,String y){
         if(x.equals(y)) {
-            return 4d;
+            return 5d;
         }else  if(x.equalsIgnoreCase(y)){
-            return 3d;
+            return 4d;
         }else if(x.contains(y)){
-            return 2d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 0d;
+            return 3d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 0d;
         }else if(StringUtils.containsIgnoreCase(x,y)){
-            return 1d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 0d;
-        }else {
+            return 2d + x.length()-y.length()!=0 ? 1d/Math.abs(x.length()-y.length()) : 0d;
+        }else if(numberOfContainedStrings(x,y)!=0){
             double numberOfContainedStrings=numberOfContainedStrings(x,y);
-            return numberOfContainedStrings != 0d ? 1d-1d/numberOfContainedStrings : 0d;
+            return 1d + numberOfContainedStrings != 0d ? 1d-1d/numberOfContainedStrings : 0d;
+        }else{
+            double numberOfContainedStringsIgnoreCase=numberOfContainedStringsIgnoreCase(x,y);
+            return numberOfContainedStringsIgnoreCase != 0d ? 1d-1d/numberOfContainedStringsIgnoreCase : 0d;
         }
     }
     private static double numberOfContainedStrings(String x,String y){
@@ -36,6 +39,16 @@ public class StringUtil {
         double number=0d;
         for(String token : tokens){
             if(x.contains(token)){
+                number++;
+            }
+        }
+        return number;
+    }
+    private static double numberOfContainedStringsIgnoreCase(String x,String y){
+        String[] tokens=y.split("(\\\\s+)|(,+)|(.+)");
+        double number=0d;
+        for(String token : tokens){
+            if(StringUtils.containsIgnoreCase(x,token)){
                 number++;
             }
         }
