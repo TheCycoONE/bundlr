@@ -32,7 +32,7 @@ public class StringUtil {
         }
     }
     private static double numberOfContainedStrings(String x,String y){
-        String[] tokens=y.split("\\\\s+|,+|.+");
+        String[] tokens=y.split("(\\\\s+)|(,+)|(.+)");
         double number=0d;
         for(String token : tokens){
             if(x.contains(token)){

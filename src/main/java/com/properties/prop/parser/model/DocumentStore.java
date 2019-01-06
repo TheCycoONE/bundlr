@@ -109,7 +109,7 @@ public class DocumentStore {
         List<Document> documents=Collections.emptyList();
         if(analyzer!=null) {
             for(String field : fieldsArray) {
-                documents=searchIndex(queryString,field,notSortedWord);
+                documents = searchIndex(queryString, field, notSortedWord);
                 if(!documents.isEmpty()){
                     break;
                 }
@@ -126,6 +126,9 @@ public class DocumentStore {
                 queryString="*"+queryString+"*";
             }
             List<Document> documents=getDocuments(field,queryString, queryParser);
+            if(documents.isEmpty()&&!field.equals(notSortedWord)){
+                documents=getDocuments(field,queryString+"*", queryParser);
+            }
             String strippedQueryString = queryString.replaceAll("\\*", "");
             if(!field.equals(notSortedWord)&&!documents.isEmpty()) {
                 Collections.sort(documents, (o1, o2) -> {
