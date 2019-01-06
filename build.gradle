@@ -49,4 +49,5 @@ dependencies {
 	compile group: 'org.apache.lucene', name: 'lucene-analyzers-common', version: '7.6.0'
 	compile group: 'org.apache.lucene', name: 'lucene-queryparser', version: '7.6.0'
 	compile group: 'org.apache.lucene', name: 'lucene-queries', version: '7.6.0'
+	compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.8.1'
 }
