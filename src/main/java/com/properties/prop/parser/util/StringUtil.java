@@ -18,8 +18,12 @@ public class StringUtil {
         return sb.toString();
     }
     public static double similarity(String x,String y){
-        if(x.equals(y)){
-            return 2d;
+        if(x.equals(y)) {
+            return 4d;
+        }else  if(x.equalsIgnoreCase(y)){
+            return 3d;
+        }else if(x.contains(y)){
+            return 2d + 1d/Math.abs(x.length()-y.length());
         }else if(StringUtils.containsIgnoreCase(x,y)){
             return 1d + 1d/Math.abs(x.length()-y.length());
         }else {
