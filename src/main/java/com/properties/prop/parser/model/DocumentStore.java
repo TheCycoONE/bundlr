@@ -122,6 +122,9 @@ public class DocumentStore {
         if(analyzer!=null) {
             QueryParser queryParser=new QueryParser(field,analyzer);
             queryParser.setDefaultOperator(QueryParser.Operator.AND);
+            if(field.equals(notSortedWord)){
+                queryString="*"+queryString+"*";
+            }
             List<Document> documents=getDocuments(field,queryString, queryParser);
             String strippedQueryString = queryString.replaceAll("\\*", "");
             if(!field.equals(notSortedWord)&&!documents.isEmpty()) {
