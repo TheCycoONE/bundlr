@@ -34,8 +34,27 @@ public class StringUtil {
             return numberOfContainedStringsIgnoreCase != 0d ? 1d-1d/numberOfContainedStringsIgnoreCase : 0d;
         }
     }
+    public static double positionSimilarity(String x,String y){
+        if(x.equals(y)) {
+            return 5d;
+        }else  if(x.equalsIgnoreCase(y)){
+            return 4d;
+        }else if(x.contains(y)){
+            int posYinX=x.indexOf(y);
+            return 3d + (posYinX!=0&&posYinX!=-1 ? (1d/x.indexOf(y)) : 1d);
+        }else if(StringUtils.containsIgnoreCase(x,y)){
+            int posYinX=x.indexOf(y);
+            return 2d + (posYinX!=0&&posYinX!=-1 ? (1d/x.indexOf(y)) : 1d);
+        }else if(numberOfContainedStrings(x,y)!=0){
+            double numberOfContainedStrings=numberOfContainedStrings(x,y);
+            return 1d + numberOfContainedStrings != 0d ? 1d-1d/numberOfContainedStrings : 0d;
+        }else{
+            double numberOfContainedStringsIgnoreCase=numberOfContainedStringsIgnoreCase(x,y);
+            return numberOfContainedStringsIgnoreCase != 0d ? 1d-1d/numberOfContainedStringsIgnoreCase : 0d;
+        }
+    }
     private static double numberOfContainedStrings(String x,String y){
-        String[] tokens=y.split("(\\\\s+)|(,+)|(.+)");
+        String[] tokens=y.split("(\\\\s+)|(,+)|(\\.+)|(:+)");
         double number=0d;
         for(String token : tokens){
             if(x.contains(token)){
@@ -45,7 +64,7 @@ public class StringUtil {
         return number;
     }
     private static double numberOfContainedStringsIgnoreCase(String x,String y){
-        String[] tokens=y.split("(\\\\s+)|(,+)|(.+)");
+        String[] tokens=y.split("(\\s+)|(,+)|(\\.+)|(:+)");
         double number=0d;
         for(String token : tokens){
             if(StringUtils.containsIgnoreCase(x,token)){

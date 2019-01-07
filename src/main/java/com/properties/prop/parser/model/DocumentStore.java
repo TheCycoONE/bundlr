@@ -132,8 +132,8 @@ public class DocumentStore {
             String strippedQueryString = queryString.replaceAll("\\*", "");
             if(!field.equals(notSortedWord)&&!documents.isEmpty()) {
                 Collections.sort(documents, (o1, o2) -> {
-                    double sim1 = StringUtil.similarity(o1.get(field), strippedQueryString);
-                    double sim2 = StringUtil.similarity(o2.get(field), strippedQueryString);
+                    double sim1 = StringUtil.positionSimilarity(o1.get(field), strippedQueryString);
+                    double sim2 = StringUtil.positionSimilarity(o2.get(field), strippedQueryString);
                     if (sim1 == sim2) {
                         return 0;
                     } else if (sim1 > sim2) {
