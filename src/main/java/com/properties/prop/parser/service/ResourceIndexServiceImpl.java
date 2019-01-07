@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ResourceIndexServiceImpl implements ResourceIndexService, InitializingBean {
@@ -91,9 +92,9 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
     @Override
     public void deleteDocuments(String storeName, List<Resource> resources) throws IOException {
         if(stores.containsKey(storeName)){
-            for(Resource resource : resources){
-                deleteDocument(storeName,resource);
-            }
+            List<String> ids=resources.stream().map(resource -> resource.getId()).collect(Collectors.toList());
+            DocumentStore documentStore=stores.get(storeName);
+            documentStore.deleteDocuments("id",ids);
         }
     }
     @Override

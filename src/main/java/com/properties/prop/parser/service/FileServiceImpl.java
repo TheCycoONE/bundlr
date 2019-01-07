@@ -68,25 +68,6 @@ public class FileServiceImpl implements FileService {
         }
     }
 
-    private void removeProperty(String filePath,String code) throws IOException, ConfigurationException {
-        File file = new File(filePath);
-        PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
-        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
-        layout.getConfiguration().setProperty(code,null);
-        layout.save(new FileWriter(file, Charset.forName("ISO-8859-1"),false));
-    }
-    private void removeProperties(Collection<String> filePaths,String code) throws IOException, ConfigurationException {
-        for(String filePath : filePaths){
-            removeProperty(filePath,code);
-        }
-    }
-
-    public void removeFileEntries(Collection<String> filePaths,List<String> codes) throws IOException, ConfigurationException {
-        for(String code : codes){
-            removeProperties(filePaths,code);
-        }
-    }
-
     private PropertiesConfigurationLayout getPropertiesConfiguration(File file) throws ConfigurationException, FileNotFoundException {
         PropertiesConfiguration config = new PropertiesConfiguration();
         PropertiesConfigurationLayout layout = new PropertiesConfigurationLayout(config);

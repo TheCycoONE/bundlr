@@ -209,25 +209,6 @@ public class ParserController {
             }
         });
         parserTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        parserTable.setOnKeyPressed(event -> {
-            if(event.getCode()==KeyCode.DELETE){
-                if(currentBundle!=null) {
-                    List<Resource> resources = (List<Resource>) parserTable.getSelectionModel().getSelectedItems();
-                    List<Resource> safeResources = resources.stream().filter(Predicate.not(resource -> resource.getCode().equals(""))).collect(Collectors.toList());
-                    List<String> codes = safeResources.stream().map(Resource::getCode).collect(Collectors.toList());
-                    Collection<String> filePaths = currentBundle.getFileMap().values();
-                    try {
-                        resourceIndexService.deleteDocuments(currentBundle.getName(), safeResources);
-                        fileService.removeFileEntries(filePaths, codes);
-                        parserTable.getItems().removeAll(safeResources);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (ConfigurationException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
     }
 
     private void triggerSearchFile(KeyEvent event) {

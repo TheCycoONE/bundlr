@@ -16,5 +16,4 @@ public interface FileService {
     ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException;
     void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException;
     void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode) throws IOException, ConfigurationException;
-    void removeFileEntries(Collection<String> filePaths, List<String> codes) throws IOException, ConfigurationException;
 }
