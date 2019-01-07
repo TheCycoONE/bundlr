@@ -653,7 +653,7 @@ public class ParserController {
             ObservableList<Resource> searchedResources;
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
-                if(!queryString.equals("")) {
+                if(!queryString.matches("( +)")&&!queryString.equals("")) {
                         searchedResources = searchResources(fieldsArray, searchOption, queryString);
                         if (!searchedResources.isEmpty()) {
                             parserTable.setItems(searchedResources);
@@ -673,7 +673,7 @@ public class ParserController {
                 for(Bundle bundle : otherBundles) {
                         String[] bundleFieldsArray =bundle.getFileMap().keySet().toArray(String[]::new);
                         if (resourceIndexService.storeExists(bundle.getName())) {
-                            if(!queryString.equals("")) {
+                            if(!queryString.matches("( +)")&&!queryString.equals("")) {
                                     searchedResources = searchResources(bundleFieldsArray, searchOption, queryString);
                                     if (!searchedResources.isEmpty()) {
                                         changeBundle(bundle);
