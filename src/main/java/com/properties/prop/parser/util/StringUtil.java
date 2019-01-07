@@ -22,33 +22,21 @@ public class StringUtil {
     }
     public static double positionSimilarity(String x,String y){
         if(x.equals(y)) {
-            return 17d;
+            return 13d;
         }else  if(x.equalsIgnoreCase(y)){
-            return 16d;
+            return 12d;
         }else if(containsExact(x,y,false)){
             double posYinX=getPositionExact(x,y,false);
-            return 15d + (posYinX!=-1 ? (1d/posYinX) : 0d);
+            return 11d + (posYinX!=-1 ? (1d/posYinX) : 0d);
         }else if(containsExactIgnoreCase(x,y,false)){
             double posYinX=getPositionExactIgnoreCase(x, y,false);
-            return 14d + (posYinX!=-1 ? (1d/posYinX) : 0d);
+            return 10d + (posYinX!=-1 ? (1d/posYinX) : 0d);
         }else if(StringUtils.contains(x,y)){
             double posYinX=getPositionContains(x,y,false);
-            return 13d + (posYinX!=-1 ? (1d/posYinX) : 0d);
+            return 9d + (posYinX!=-1 ? (1d/posYinX) : 0d);
         }else if(StringUtils.containsIgnoreCase(x,y)){
             double posYinX=getPositionContainsIgnoreCase(x,y,false);
-            return 12d + (posYinX!=-1 ? (1d/posYinX) : 0d);
-        }else if(numberOfExactStrings(x,y,false)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,false);
-            return 11d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
-        }else if(numberOfExactStringsIgnoreCase(x,y,false)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,false);
-            return 10d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
-        }else if(numberOfContainedStrings(x,y,false)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,false);
-            return 9d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
-        }else if(numberOfContainedStringsIgnoreCase(x,y,false)!=0){
-            double numberOfContainedStringsIgnoreCase=numberOfContainedStringsIgnoreCase(x,y,false);
-            return 8d + numberOfContainedStringsIgnoreCase != 1d ? (1d-1d/numberOfContainedStringsIgnoreCase) : 0d;
+            return 8d + (posYinX!=-1 ? (1d/posYinX) : 0d);
         }else if(containsExact(x,y,true)){
             double posYinX=getPositionExact(x,y,true);
             return 7d + (posYinX!=-1 ? (1d/posYinX) : 0d);
@@ -61,17 +49,17 @@ public class StringUtil {
         }else if(StringUtils.containsIgnoreCase(x,y)){
             double posYinX=getPositionContainsIgnoreCase(x,y,true);
             return 4d + (posYinX!=-1 ? (1d/posYinX) : 0d);
-        }else if(numberOfExactStrings(x,y,true)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,true);
+        }else if(numberOfExactStrings(x,y)!=0){
+            double numberOfContainedStrings=numberOfContainedStrings(x,y);
             return 3d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
-        }else if(numberOfExactStringsIgnoreCase(x,y,true)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,true);
+        }else if(numberOfExactStringsIgnoreCase(x,y)!=0){
+            double numberOfContainedStrings=numberOfContainedStrings(x,y);
             return 2d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
-        }else if(numberOfContainedStrings(x,y,true)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y,true);
+        }else if(numberOfContainedStrings(x,y)!=0){
+            double numberOfContainedStrings=numberOfContainedStrings(x,y);
             return 1d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
         }else{
-            double numberOfContainedStringsIgnoreCase=numberOfContainedStringsIgnoreCase(x,y,true);
+            double numberOfContainedStringsIgnoreCase=numberOfContainedStringsIgnoreCase(x,y);
             return numberOfContainedStringsIgnoreCase != 1d ? (1d-1d/numberOfContainedStringsIgnoreCase) : 0d;
         }
     }
@@ -159,53 +147,41 @@ public class StringUtil {
         }
         return position;
     }
-    private static double numberOfExactStrings(String x,String y,boolean escapeY){
-        String[] tokens=x.split(SPECIAL_CHAR_REGEX);
-        if(escapeY){
-            y=y.replaceAll(SPECIAL_CHAR_REGEX,"");
-        }
+    private static double numberOfExactStrings(String x,String y){
+        String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
         for(String token : tokens){
-            if(token.equals(y)){
+            if(x.equals(token)){
                 number++;
             }
         }
         return number;
     }
-    private static double numberOfExactStringsIgnoreCase(String x,String y,boolean escapeY){
-        String[] tokens=x.split(SPECIAL_CHAR_REGEX);
-        if(escapeY){
-            y=y.replaceAll(SPECIAL_CHAR_REGEX,"");
-        }
+    private static double numberOfExactStringsIgnoreCase(String x,String y){
+        String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
         for(String token : tokens){
-            if(token.equalsIgnoreCase(y)){
+            if(x.equalsIgnoreCase(token)){
                 number++;
             }
         }
         return number;
     }
-    private static double numberOfContainedStrings(String x,String y,boolean escapeY){
-        String[] tokens=x.split(SPECIAL_CHAR_REGEX);
-        if(escapeY){
-            y=y.replaceAll(SPECIAL_CHAR_REGEX,"");
-        }
+    private static double numberOfContainedStrings(String x,String y){
+        String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
         for(String token : tokens){
-            if(token.contains(y)){
+            if(x.contains(token)){
                 number++;
             }
         }
         return number;
     }
-    private static double numberOfContainedStringsIgnoreCase(String x,String y,boolean escapeY){
-        String[] tokens=x.split(SPECIAL_CHAR_REGEX);
-        if(escapeY){
-            y=y.replaceAll(SPECIAL_CHAR_REGEX,"");
-        }
+    private static double numberOfContainedStringsIgnoreCase(String x,String y){
+        String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
         for(String token : tokens){
-            if(StringUtils.containsIgnoreCase(token,y)){
+            if(StringUtils.containsIgnoreCase(x,token)){
                 number++;
             }
         }
