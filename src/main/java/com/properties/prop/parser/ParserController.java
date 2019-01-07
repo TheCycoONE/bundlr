@@ -410,9 +410,9 @@ public class ParserController {
         List<String> columnNames= new ArrayList<>(fileMap.keySet());
         sortFields(columnNames);
         List<String> searchOptions=new ArrayList<>();
-        searchOptions.add("All columns");
         searchOptions.add("code");
         searchOptions.addAll(columnNames);
+        searchOptions.add("All columns");
         searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
         searchOptionsBox.getSelectionModel().select(0);
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
