@@ -667,14 +667,7 @@ public class ParserController {
                 ObservableList<Resource> searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
                 parserTable.setItems(searchedResources);
             }
-            List<String> columnNames= new ArrayList<>(currentBundle.getFileMap().keySet());
-            sortFields(columnNames);
-            List<String> searchOptions=new ArrayList<>();
-            searchOptions.add("code");
-            searchOptions.addAll(columnNames);
-            searchResourcesMap=Collections.emptyMap();
-            searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
-            searchOptionsBox.getSelectionModel().select(searchOption);
+            reloadAllColumns();
             parserTable.getItems().add(new Resource(""));
         }
     }
@@ -698,7 +691,7 @@ public class ParserController {
                     resources=resourceIndexService.getAllResources(currentBundle.getName());
                     parserTable.setItems(resources);
                     parserTable.getItems().add(new Resource(""));
-                    searchOptionsBox.getSelectionModel().select(searchOption);
+                    reloadAllColumns();
                     matchFound=true;
                 }
             }
@@ -718,6 +711,17 @@ public class ParserController {
                     }
             }
         }
+    }
+
+    private void reloadAllColumns() {
+        List<String> columnNames = new ArrayList<>(currentBundle.getFileMap().keySet());
+        sortFields(columnNames);
+        List<String> searchOptions = new ArrayList<>();
+        searchOptions.add("code");
+        searchOptions.addAll(columnNames);
+        searchResourcesMap = Collections.emptyMap();
+        searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
+        searchOptionsBox.getSelectionModel().select(searchOption);
     }
 
     private void setSelectedOption(String searchString) {
