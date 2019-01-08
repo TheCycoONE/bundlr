@@ -665,16 +665,16 @@ public class ParserController {
             searchBar.clear();
             if (resourceIndexService.storeExists(currentBundle.getName())) {
                 ObservableList<Resource> searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
-                if (!searchedResources.isEmpty()) {
-                    parserTable.setItems(searchedResources);
-                }
+                parserTable.setItems(searchedResources);
             }
             List<String> columnNames= new ArrayList<>(currentBundle.getFileMap().keySet());
             sortFields(columnNames);
             List<String> searchOptions=new ArrayList<>();
             searchOptions.add("code");
             searchOptions.addAll(columnNames);
+            searchResourcesMap=Collections.emptyMap();
             searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
+            searchOptionsBox.getSelectionModel().select(searchOption);
             parserTable.getItems().add(new Resource(""));
         }
     }
@@ -691,13 +691,14 @@ public class ParserController {
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
                     matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
                     if (matchFound) {
-                        selectOption(searchString, searchOption);
+                        setSelectedOption(searchString);
                     }
                 }else{
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
                     resources=resourceIndexService.getAllResources(currentBundle.getName());
                     parserTable.setItems(resources);
                     parserTable.getItems().add(new Resource(""));
+                    searchOptionsBox.getSelectionModel().select(searchOption);
                     matchFound=true;
                 }
             }
@@ -710,11 +711,22 @@ public class ParserController {
                             matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
                             if(matchFound){
                                 softChangeBundle(bundle);
-                                selectOption(searchString, searchOption);
+                                setSelectedOption(searchString);
                                 break;
                             }
                         }
                     }
+            }
+        }
+    }
+
+    private void setSelectedOption(String searchString) {
+        if (searchResourcesMap.get(searchOption)!=null&&!searchResourcesMap.get(searchOption).isEmpty()) {
+            selectOption(searchString, searchOption);
+        } else {
+            String firstMatch = searchResourcesMap.entrySet().stream().filter(entry -> !entry.getValue().isEmpty()).map(entry -> entry.getKey()).findFirst().orElse("");
+            if (!firstMatch.equals("")) {
+                selectOption(searchString, firstMatch);
             }
         }
     }
