@@ -132,6 +132,9 @@ public class StringUtil {
                 break;
             }
         }
+        if(position==-1d){
+            position=x.length()+x.indexOf(y);
+        }
         return position;
     }
     private static double getPositionContainsIgnoreCase(String x, String y,boolean escapeY){
@@ -146,6 +149,9 @@ public class StringUtil {
                 position += tokens[i].length();
                 break;
             }
+        }
+        if(position==-1d){
+            position=x.length()+x.indexOf(y);
         }
         return position;
     }
