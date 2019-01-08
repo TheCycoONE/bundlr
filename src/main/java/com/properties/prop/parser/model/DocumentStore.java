@@ -118,9 +118,8 @@ public class DocumentStore {
         }else {
             if (analyzer != null) {
                 for (String field : fieldsArray) {
-                    documents = getAllDocuments();
                     if (!documents.isEmpty()) {
-                        fieldDocMap.put(field, documents);
+                        fieldDocMap.put(field, Collections.emptyList());
                     }
                 }
             }

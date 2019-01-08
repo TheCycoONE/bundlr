@@ -687,10 +687,18 @@ public class ParserController {
             ObservableList<Resource> searchedResources;
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
-                loadResourcesMap(searchString, fieldsArray,currentBundle);
-                matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
-                if(matchFound){
-                    selectOption(searchString, searchOption);
+                if(!searchString.matches("( +)")&&!searchString.equals("")) {
+                    loadResourcesMap(searchString, fieldsArray, currentBundle);
+                    matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
+                    if (matchFound) {
+                        selectOption(searchString, searchOption);
+                    }
+                }else{
+                    loadResourcesMap(searchString, fieldsArray, currentBundle);
+                    resources=resourceIndexService.getAllResources(currentBundle.getName());
+                    parserTable.setItems(resources);
+                    parserTable.getItems().add(new Resource(""));
+                    matchFound=true;
                 }
             }
             if(!matchFound){
