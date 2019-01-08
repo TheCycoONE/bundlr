@@ -14,9 +14,7 @@ import org.apache.lucene.store.FSDirectory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class DocumentStore {
     private Directory index;
@@ -105,17 +103,29 @@ public class DocumentStore {
             deleteDocument(key,value);
         }
     }
-    public List<Document> searchIndex(String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
+    public Map<String,List<Document>> searchIndex(String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
         List<Document> documents=Collections.emptyList();
-        if(analyzer!=null) {
-            for(String field : fieldsArray) {
-                documents = searchIndex(queryString, field, notSortedWord);
-                if(!documents.isEmpty()){
-                    break;
+        Map<String,List<Document>> fieldDocMap=new LinkedHashMap<>();
+        if(!queryString.matches("( +)")&&!queryString.equals("")) {
+            if (analyzer != null) {
+                for (String field : fieldsArray) {
+                    documents = searchIndex(queryString, field, notSortedWord);
+                    if (!documents.isEmpty()) {
+                        fieldDocMap.put(field, documents);
+                    }
+                }
+            }
+        }else {
+            if (analyzer != null) {
+                for (String field : fieldsArray) {
+                    documents = getAllDocuments();
+                    if (!documents.isEmpty()) {
+                        fieldDocMap.put(field, documents);
+                    }
                 }
             }
         }
-        return documents;
+        return fieldDocMap;
     }
 
     public List<Document> searchIndex(String queryString,String field,String notSortedWord) throws ParseException, IOException {

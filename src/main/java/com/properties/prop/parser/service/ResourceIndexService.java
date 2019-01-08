@@ -6,6 +6,7 @@ import org.apache.lucene.queryparser.classic.ParseException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface ResourceIndexService {
@@ -18,7 +19,7 @@ public interface ResourceIndexService {
     void deleteDocuments(String storeName, List<Resource> resources) throws IOException;
     void deleteStore(String storeName) throws IOException;
     boolean storeExists(String storeName);
-    ObservableList<Resource> searchIndex(String storeName,String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException;
+    Map<String,ObservableList<Resource>> searchIndex(String storeName, String queryString, String[] fieldsArray, String notSortedWord) throws ParseException, IOException;
     ObservableList<Resource> searchIndex(String storeName,String queryString, String field,String notSortedWord) throws ParseException, IOException;
     ObservableList<Resource> getAllResources(String storeName) throws IOException;
 }

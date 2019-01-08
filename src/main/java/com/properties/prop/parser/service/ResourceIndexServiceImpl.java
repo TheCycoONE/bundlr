@@ -14,10 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,14 +102,14 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public ObservableList<Resource> searchIndex(String storeName,String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
+    public Map<String,ObservableList<Resource>> searchIndex(String storeName,String queryString, String[] fieldsArray,String notSortedWord) throws ParseException, IOException {
         if(stores.containsKey(storeName)) {
             DocumentStore documentStore = stores.get(storeName);
-            List<Document> documents = documentStore.searchIndex(queryString,fieldsArray,notSortedWord);
-            List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
-            return FXCollections.observableArrayList(resources);
+            Map<String,List<Document>> documentsMap = documentStore.searchIndex(queryString,fieldsArray,notSortedWord);
+            Map<String,ObservableList<Resource>> resourcesMap = documentsMap.entrySet().stream().collect(Collectors.toMap(entry->entry.getKey(),entry->FXCollections.observableArrayList(resourceDocumentConverter.convertAllToResource(entry.getValue()))));
+            return resourcesMap;
         }
-        return FXCollections.emptyObservableList();
+        return new LinkedHashMap<>();
     }
 
     @Override

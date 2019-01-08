@@ -70,6 +70,9 @@ public class ParserController {
     private Bundle currentBundle;
     private ObservableList<Bundle> bundles;
     private TableView parserTable;
+    Map<String,ObservableList<Resource>> searchResourcesMap;
+    private String searchOption;
+    private ChangeListener<Bundle> bundleChangeListener;
 
     @Autowired
     private FileService fileService;
@@ -88,6 +91,7 @@ public class ParserController {
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        searchResourcesMap=Collections.emptyMap();
         bundleBox.setTooltip(new Tooltip(CHOOSE_BUNDLE));
         searchOptionsBox.setTooltip(new Tooltip(CHOOSE_COLUMN));
         bundleSearchBtn.setTooltip(new Tooltip(FILTER_BUNDLES));
@@ -127,19 +131,30 @@ public class ParserController {
         } catch (IOException e) {
             bundles = FXCollections.observableArrayList();
         }
+        bundleChangeListener=(observable, oldValue, newValue) -> {
+            if(newValue!=null){
+                try {
+                    changeBundle(newValue);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ConfigurationException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
         bundleBox.setItems(bundles);
         if(!bundles.isEmpty()){
-            changeBundle(bundles.get(0));
+            setBundle(bundles.get(0));
         }
-        bundleBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Bundle>) (observable, oldValue, newValue) -> {
-            try {
-                if(newValue!=null) {
-                    changeBundle(newValue);
+        searchOptionsBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if(newValue!=null){
+                if(searchResourcesMap!=null&&!searchResourcesMap.isEmpty()){
+                    ObservableList<Resource> resources=searchResourcesMap.get(newValue);
+                    if(resources!=null&&!resources.isEmpty()){
+                        parserTable.setItems(resources);
+                    }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ConfigurationException e) {
-                e.printStackTrace();
             }
         });
         bundleBox.getSelectionModel().select(0);
@@ -158,7 +173,13 @@ public class ParserController {
         });
         deleteBundleBtn.setOnKeyPressed(event -> {
             if(event.getCode() == KeyCode.ENTER){
-                deleteBundle();
+                try {
+                    deleteBundle();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ConfigurationException e) {
+                    e.printStackTrace();
+                }
             }
         });
         openFolderBtn.setOnKeyPressed(event -> {
@@ -242,15 +263,27 @@ public class ParserController {
     }
 
     private void changeBundle(Bundle bundle) throws IOException, ConfigurationException {
-        currentBundle=bundle;
-        if(bundle.getFileMap().isEmpty()) {
-            updateStoreUI(bundle);
-        }else {
-            changeColumnNames(bundle.getFileMap());
-            loadData(bundle.getName());
-        }
+            currentBundle = bundle;
+            if (bundle.getFileMap().isEmpty()) {
+                updateStoreUI(bundle);
+            } else {
+                changeColumnNames(bundle.getFileMap());
+                loadData(bundle.getName());
+            }
+            bundleBox.getSelectionModel().select(bundle);
+    }
+    private void setBundle(Bundle bundle){
         bundleBox.getSelectionModel().select(bundle);
     }
+    private void softChangeBundle(Bundle bundle) throws IOException, ConfigurationException {
+        currentBundle=bundle;
+        changeColumnNames(bundle.getFileMap());
+        specialLoadData(bundle.getName());
+        bundleBox.getSelectionModel().selectedItemProperty().removeListener(bundleChangeListener);
+        bundleBox.getSelectionModel().select(bundle);
+        bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
+    }
+
     private void updateIndexes() throws IOException, ConfigurationException {
         Iterator<Bundle> bundleIterator=bundles.listIterator();
         while (bundleIterator.hasNext()){
@@ -340,16 +373,23 @@ public class ParserController {
     }
 
     private String[] getFieldsArray() {
-        List<String> fields= new ArrayList<>(currentBundle.getFileMap().keySet());
-        sortFields(fields);
+        return getFields(currentBundle);
+    }
+    private String[] getFieldsArray(Bundle bundle) {
+        return getFields(bundle);
+    }
+
+    private String[] getFields(Bundle bundle) {
+        List<String> fields = new ArrayList<>(bundle.getFileMap().keySet());
         fields.add("code");
+        sortFields(fields);
         return fields.toArray(String[]::new);
     }
 
     private void sortFields(List<String> fields) {
         Collections.sort(fields, (o1, o2) -> {
-            String s1 = o1.substring(o1.length() - 5);
-            String s2 = o2.substring(o2.length() - 5);
+            String s1 = o1.length()>4 ? o1.substring(o1.length() - 5): o1;
+            String s2 = o2.length()>4 ? o2.substring(o2.length() - 5): o2;
             if (s1.equals(s2)) {
                 return 0;
             }
@@ -384,7 +424,6 @@ public class ParserController {
     }
 
     private void loadData(String storeName) throws IOException, ConfigurationException {
-        parserTable.getItems().clear();
         if(resources!=null) {
             resources.clear();
         }
@@ -395,10 +434,20 @@ public class ParserController {
         parserTable.setItems(resources);
         parserTable.getItems().add(new Resource(""));
     }
+    private void specialLoadData(String storeName) throws IOException, ConfigurationException {
+        if(resources!=null) {
+            resources.clear();
+        }
+        if(resourceIndexService.storeExists(storeName)){
+            resourceIndexService.createLanguageBasedAnalyzer(storeName,currentBundle.getFileMap().keySet());
+            resources=searchResourcesMap.get(searchOption);
+        }
+        parserTable.setItems(resources);
+        parserTable.getItems().add(new Resource(""));
+    }
 
     private void changeColumnNames(Map<String,String> fileMap) {
         parserTable.getColumns().clear();
-        parserTable.getItems().clear();
         tablePane.getChildren().remove(parserTable);
         parserTable=new TableView<Resource>();
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -412,7 +461,6 @@ public class ParserController {
         List<String> searchOptions=new ArrayList<>();
         searchOptions.add("code");
         searchOptions.addAll(columnNames);
-        searchOptions.add("All columns");
         searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
         searchOptionsBox.getSelectionModel().select(0);
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
@@ -532,7 +580,7 @@ public class ParserController {
                         processBundleDirectory(subFile);
                     }
                 }
-                changeBundle(bundles.get(0));
+                setBundle(bundles.get(0));
             }
         }
     }
@@ -621,6 +669,12 @@ public class ParserController {
                     parserTable.setItems(searchedResources);
                 }
             }
+            List<String> columnNames= new ArrayList<>(currentBundle.getFileMap().keySet());
+            sortFields(columnNames);
+            List<String> searchOptions=new ArrayList<>();
+            searchOptions.add("code");
+            searchOptions.addAll(columnNames);
+            searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
             parserTable.getItems().add(new Resource(""));
         }
     }
@@ -628,64 +682,60 @@ public class ParserController {
     @FXML private void searchFile() throws IOException, ParseException, ConfigurationException {
         if(currentBundle!=null) {
             String searchString=searchBar.getText();
-            String queryString = searchString;
             String[] fieldsArray = getFieldsArray();
-            String searchOption = searchOptionsBox.getSelectionModel().getSelectedItem().toString();
+            searchOption = searchOptionsBox.getSelectionModel().getSelectedItem().toString();
             ObservableList<Resource> searchedResources;
             boolean matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
-                if(!queryString.matches("( +)")&&!queryString.equals("")) {
-                        searchedResources = searchResources(fieldsArray, searchOption, queryString);
-                        if (!searchedResources.isEmpty()) {
-                            parserTable.setItems(searchedResources);
-                            matchFound = true;
-                        }
-                }else {
-                    searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
-                    if(!searchedResources.isEmpty()){
-                        parserTable.setItems(searchedResources);
-                        matchFound = true;
-                    }
+                loadResourcesMap(searchString, fieldsArray,currentBundle);
+                matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
+                if(matchFound){
+                    selectOption(searchString, searchOption);
                 }
             }
             if(!matchFound){
                 List<Bundle> otherBundles=bundles.stream().filter(Predicate.not(bundle -> bundle.getName().equals(currentBundle.getName()))).collect(Collectors.toList());
-                queryString=searchString;
                 for(Bundle bundle : otherBundles) {
-                        String[] bundleFieldsArray =bundle.getFileMap().keySet().toArray(String[]::new);
+                        String[] bundleFieldsArray=getFields(bundle);
                         if (resourceIndexService.storeExists(bundle.getName())) {
-                            if(!queryString.matches("( +)")&&!queryString.equals("")) {
-                                    searchedResources = searchResources(bundleFieldsArray, searchOption, queryString);
-                                    if (!searchedResources.isEmpty()) {
-                                        changeBundle(bundle);
-                                        parserTable.setItems(searchedResources);
-                                        break;
-                                }
-                            }else {
-                                searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
-                                if(!searchedResources.isEmpty()){
-                                    parserTable.setItems(searchedResources);
-                                    break;
-                                }
+                            loadResourcesMap(searchString,bundleFieldsArray,bundle);
+                            matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
+                            if(matchFound){
+                                softChangeBundle(bundle);
+                                selectOption(searchString, searchOption);
+                                break;
                             }
                         }
                     }
             }
-            parserTable.getItems().add(new Resource(""));
         }
     }
 
-    private ObservableList<Resource> searchResources(String[] fieldsArray, String searchOption, String queryString) throws ParseException, IOException {
-        ObservableList<Resource> searchedResources;
-        if(searchOption.equals("All columns")) {
-            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, fieldsArray,"code");
-        }else{
-            searchedResources = resourceIndexService.searchIndex(currentBundle.getName(), queryString, searchOption,"code");
+    private void selectOption(String queryString, String searchOption) {
+        searchOptionsBox.getSelectionModel().select(searchOption);
+        if (!queryString.matches("( +)") && !queryString.equals("")) {
+            searchOptionsBox.show();
         }
-        return searchedResources;
+        parserTable.getItems().add(new Resource(""));
     }
 
-    @FXML private void deleteBundle(){
+    private void loadResourcesMap(String queryString, String[] fieldsArray,Bundle bundle) throws ParseException, IOException {
+        searchResourcesMap = resourceIndexService.searchIndex(bundle.getName(), queryString, fieldsArray,"code");
+        if(!searchResourcesMap.isEmpty()) {
+            Iterator<String> iterator = searchResourcesMap.keySet().iterator();
+            while (iterator.hasNext()) {
+                String key = iterator.next();
+                if (searchResourcesMap.get(key).isEmpty()) {
+                    searchResourcesMap.remove(key);
+                }
+            }
+            List<String> options = new ArrayList<>(searchResourcesMap.keySet());
+            sortFields(options);
+            searchOptionsBox.setItems(FXCollections.observableArrayList(options));
+        }
+    }
+
+    @FXML private void deleteBundle() throws IOException, ConfigurationException {
         if(currentBundle!=null) {
             Bundle bundle = (Bundle) bundleBox.getSelectionModel().getSelectedItem();
             try {
@@ -700,15 +750,9 @@ public class ParserController {
             bundles.remove(bundle);
             bundleBox.setItems(bundles);
             if (!bundles.isEmpty()) {
-                try {
-                    Bundle initialBundle = bundles.get(0);
-                    changeBundle(initialBundle);
-                    bundleBox.getSelectionModel().select(bundles.indexOf(initialBundle));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (ConfigurationException e) {
-                    e.printStackTrace();
-                }
+                Bundle initialBundle = bundles.get(0);
+                setBundle(initialBundle);
+                bundleBox.getSelectionModel().select(bundles.indexOf(initialBundle));
             }
         }
     }
