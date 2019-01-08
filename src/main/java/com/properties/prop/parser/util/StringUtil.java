@@ -132,11 +132,20 @@ public class StringUtil {
                 break;
             }
         }
-        if(position==-1d){
-            position=x.length()+x.indexOf(y);
+        position = getIndexOfPosition(x, y, position);
+        return position;
+    }
+
+    private static double getIndexOfPosition(String x, String y, double position) {
+        if (position == -1d) {
+            int indexOfY = x.indexOf(y);
+            if (indexOfY != -1) {
+                position = x.length() + indexOfY;
+            }
         }
         return position;
     }
+
     private static double getPositionContainsIgnoreCase(String x, String y,boolean escapeY){
         String[] tokens=x.split(SPECIAL_CHAR_REGEX);
         if(escapeY){
@@ -150,9 +159,7 @@ public class StringUtil {
                 break;
             }
         }
-        if(position==-1d){
-            position=x.length()+x.indexOf(y);
-        }
+        position = getIndexOfPosition(x, y, position);
         return position;
     }
     private static double numberOfExactStrings(String x,String y){
