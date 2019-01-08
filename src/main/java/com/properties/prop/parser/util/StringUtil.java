@@ -128,6 +128,7 @@ public class StringUtil {
         for(int i=0;i<tokens.length;i++){
             if(tokens[i].contains(y)) {
                 position = i+2;
+                position += tokens[i].length();
                 break;
             }
         }
@@ -142,6 +143,7 @@ public class StringUtil {
         for(int i=0;i<tokens.length;i++){
             if(StringUtil.containsExactIgnoreCase(tokens[i],y,escapeY)) {
                 position = i+2;
+                position += tokens[i].length();
                 break;
             }
         }
