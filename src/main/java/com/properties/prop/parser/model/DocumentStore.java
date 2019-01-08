@@ -139,7 +139,7 @@ public class DocumentStore {
                 documents=getDocuments(field,queryString+"*", queryParser);
             }
             String strippedQueryString = queryString.replaceAll("\\*", "");
-            if(!field.equals(notSortedWord)&&!documents.isEmpty()) {
+            if(!documents.isEmpty()) {
                 Collections.sort(documents, (o1, o2) -> {
                     double sim1 = StringUtil.positionSimilarity(o1.get(field), strippedQueryString);
                     double sim2 = StringUtil.positionSimilarity(o2.get(field), strippedQueryString);
