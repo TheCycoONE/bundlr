@@ -130,7 +130,7 @@ public class DocumentStore {
     public List<Document> searchIndex(String queryString,String field,String notSortedWord) throws ParseException, IOException {
         if(analyzer!=null) {
             QueryParser queryParser=new QueryParser(field,analyzer);
-            queryParser.setDefaultOperator(QueryParser.Operator.OR);
+            queryParser.setDefaultOperator(QueryParser.Operator.AND);
             if(field.equals(notSortedWord)){
                 queryString="*"+queryString+"*";
             }
