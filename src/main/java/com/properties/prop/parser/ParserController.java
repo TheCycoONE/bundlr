@@ -870,21 +870,25 @@ public class ParserController {
     @FXML private void deleteBundle() throws IOException, ConfigurationException {
         if(currentBundle!=null) {
             Bundle bundle = (Bundle) bundleBox.getSelectionModel().getSelectedItem();
-            try {
-                resourceIndexService.deleteStore(bundle.getName());
-                bundleService.deleteBundle(bundle);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (bundle.getName().equals(currentBundle.getName())) {
-                clearParseTable();
-            }
-            bundles.remove(bundle);
-            bundleBox.setItems(bundles);
-            if (!bundles.isEmpty()) {
-                Bundle initialBundle = bundles.get(0);
-                setBundle(initialBundle);
-                bundleBox.getSelectionModel().select(bundles.indexOf(initialBundle));
+            if(bundle!=null) {
+                try {
+                    resourceIndexService.deleteStore(bundle.getName());
+                    bundleService.deleteBundle(bundle);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (bundle.getName().equals(currentBundle.getName())) {
+                    clearParseTable();
+                }
+                if (bundles != null) {
+                    bundles.remove(bundle);
+                    bundleBox.setItems(bundles);
+                }
+                if (bundles != null && !bundles.isEmpty()) {
+                    Bundle initialBundle = bundles.get(0);
+                    setBundle(initialBundle);
+                    bundleBox.getSelectionModel().select(bundles.indexOf(initialBundle));
+                }
             }
         }
     }
