@@ -50,7 +50,6 @@ public class EditCell<S, T> extends TableCell<S, T> {
                 if (nextColumn != null) {
                     getTableView().getSelectionModel().clearAndSelect(getTableRow().getIndex(), nextColumn);
                     getTableView().edit(getTableRow().getIndex(), nextColumn);
-                    getTableRow().requestFocus();
                 }
             }
         });

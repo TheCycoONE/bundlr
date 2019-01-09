@@ -94,14 +94,6 @@ public class ParserController {
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
         parserTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         searchResourcesMap=Collections.emptyMap();
-        bundleBox.setTooltip(new Tooltip(CHOOSE_BUNDLE));
-        searchOptionsBox.setTooltip(new Tooltip(CHOOSE_COLUMN));
-        bundleSearchBtn.setTooltip(new Tooltip(FILTER_BUNDLES));
-        bundleSearchField.setTooltip(new Tooltip(ENTER_FILTER_CRITERIA));
-        searchBar.setTooltip(new Tooltip(ENTER_SEARCH_TEXT));
-        resetFilterBtn.setTooltip(new Tooltip(RESET_BUNDLE_FILTER));
-        allBtn.setTooltip(new Tooltip(GET_ALL_PROPERTIES));
-        deleteBundleBtn.setTooltip(new Tooltip(DELETE_BUNDLE));
         searchResourcesBtn.setTooltip(new Tooltip(SEARCH_PROPERTIES));
         Callback<ListView<Bundle>,ListCell<Bundle>> cellFactory= new Callback<>() {
             @Override
@@ -529,6 +521,12 @@ public class ParserController {
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
         codeColumn.setCellFactory(column -> EditCell.createStringEditCell());
+        codeColumn.setOnEditStart(event -> {
+            setTraversable(false);
+        });
+        codeColumn.setOnEditCancel(event -> {
+            setTraversable(true);
+        });
         codeColumn.setOnEditCommit((Event event) -> {
                     CellEditEvent<Resource, String> cellEditEvent = (CellEditEvent<Resource, String>) event;
                     Resource resource = (cellEditEvent).getTableView().getItems().get(
@@ -550,7 +548,7 @@ public class ParserController {
                                         long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                                         currentBundle.setLastModified(lastModified);
                                         bundleService.updateBundle(currentBundle);
-                                        parserTable.requestFocus();
+                                        setTraversable(true);
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -573,6 +571,12 @@ public class ParserController {
         for(TableColumn tableColumn : tableColumns){
             tableColumn.setCellValueFactory((Callback<TableColumn.CellDataFeatures<Resource, String>, ObservableValue<String>>) r -> r.getValue().getProperty(tableColumn.getText()));
             tableColumn.setCellFactory(column -> EditCell.createStringEditCell());
+            tableColumn.setOnEditStart(event -> {
+                setTraversable(false);
+            });
+            tableColumn.setOnEditCancel(event -> {
+                setTraversable(true);
+            });
             tableColumn.setOnEditCommit((Event event) ->{
                 CellEditEvent<Resource,String> cellEditEvent=(CellEditEvent<Resource,String>) event;
                 Resource resource=(cellEditEvent).getTableView().getItems().get(
@@ -586,7 +590,7 @@ public class ParserController {
                             long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                             currentBundle.setLastModified(lastModified);
                             bundleService.updateBundle(currentBundle);
-                            parserTable.requestFocus();
+                            setTraversable(true);
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
@@ -607,6 +611,19 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
+    }
+
+    private void setTraversable(boolean b) {
+        bundleBox.setFocusTraversable(b);
+        searchOptionsBox.setFocusTraversable(b);
+        bundleSearchBtn.setFocusTraversable(b);
+        bundleSearchField.setFocusTraversable(b);
+        searchBar.setFocusTraversable(b);
+        resetFilterBtn.setFocusTraversable(b);
+        allBtn.setFocusTraversable(b);
+        deleteBundleBtn.setFocusTraversable(b);
+        openFolderBtn.setFocusTraversable(b);
+        searchResourcesBtn.setFocusTraversable(b);
     }
 
     private void setSortPolicy() {
