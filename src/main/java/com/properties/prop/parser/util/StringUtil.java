@@ -52,10 +52,10 @@ public class StringUtil {
             double posYinX=getPositionContainsIgnoreCase(x,y,true);
             return 5d + (posYinX!=-1 ? (1d/posYinX) : 0d);
         }else if(numberOfExactStrings(x,y)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y);
+            double numberOfContainedStrings=numberOfExactStrings(x,y);
             return 4d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
         }else if(numberOfExactStringsIgnoreCase(x,y)!=0){
-            double numberOfContainedStrings=numberOfContainedStrings(x,y);
+            double numberOfContainedStrings=numberOfExactStringsIgnoreCase(x,y);
             return 3d + numberOfContainedStrings != 1d ? (1d-1d/numberOfContainedStrings) : 0d;
         }else if(numberOfContainedStrings(x,y)!=0){
             double numberOfContainedStrings=numberOfContainedStrings(x,y);
@@ -220,9 +220,10 @@ public class StringUtil {
     private static double numberOfExactStrings(String x,String y){
         String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
+        double position=1d;
         for(String token : tokens){
             if(x.equals(token)){
-                number++;
+                number+=(1d-1d/position)+1;
             }
         }
         return number;
@@ -230,9 +231,10 @@ public class StringUtil {
     private static double numberOfExactStringsIgnoreCase(String x,String y){
         String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
+        double position=1d;
         for(String token : tokens){
             if(x.equalsIgnoreCase(token)){
-                number++;
+                number+=(1d-1d/position)+1;
             }
         }
         return number;
@@ -240,9 +242,11 @@ public class StringUtil {
     private static double numberOfContainedStrings(String x,String y){
         String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
+        double position=1d;
         for(String token : tokens){
+            position++;
             if(x.contains(token)){
-                number++;
+                number+=(1d-1d/position)+1;
             }
         }
         return number;
@@ -250,9 +254,11 @@ public class StringUtil {
     private static double numberOfContainedStringsIgnoreCase(String x,String y){
         String[] tokens=y.split(SPECIAL_CHAR_REGEX);
         double number=1d;
+        double position=1d;
         for(String token : tokens){
+            position++;
             if(StringUtils.containsIgnoreCase(x,token)){
-                number++;
+                number+=(1d-1d/position)+1;
             }
         }
         return number;
