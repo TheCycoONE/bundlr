@@ -548,6 +548,7 @@ public class ParserController {
                                         long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                                         currentBundle.setLastModified(lastModified);
                                         bundleService.updateBundle(currentBundle);
+                                        parserTable.requestFocus();
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -583,6 +584,7 @@ public class ParserController {
                             long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                             currentBundle.setLastModified(lastModified);
                             bundleService.updateBundle(currentBundle);
+                            parserTable.requestFocus();
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
