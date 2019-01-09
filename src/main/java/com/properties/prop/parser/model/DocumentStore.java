@@ -10,6 +10,7 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,13 +60,17 @@ public class DocumentStore {
     }
     public void addDocuments(List<Document> documents)throws IOException {
         if(analyzer!=null) {
-            IndexWriterConfig config = new IndexWriterConfig(analyzer);
-            IndexWriter writer = new IndexWriter(index, config);
-            for (Document document : documents) {
-                writer.addDocument(document);
+            try {
+                IndexWriterConfig config = new IndexWriterConfig(analyzer);
+                IndexWriter writer = new IndexWriter(index, config);
+                for (Document document : documents) {
+                    writer.addDocument(document);
+                }
+                writer.commit();
+                writer.close();
+            }catch (LockObtainFailedException ex){
+
             }
-            writer.commit();
-            writer.close();
         }
     }
     public void addDocument(Document document) throws IOException {

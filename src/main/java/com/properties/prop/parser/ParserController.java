@@ -70,7 +70,7 @@ public class ParserController {
 
     private ObservableList<Resource> resources;
     private Bundle currentBundle;
-    private ObservableList<Bundle> bundles;
+    private ObservableList<Bundle> bundles=FXCollections.observableArrayList(Collections.emptyList());
     private TableView parserTable;
     Map<String,ObservableList<Resource>> searchResourcesMap;
     private String searchOption;
@@ -86,7 +86,7 @@ public class ParserController {
     private BundleService bundleService;
 
     @FXML
-    public void initialize() throws IOException, ConfigurationException {
+    public void initialize() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         parserTable=new TableView<Resource>();
         parserTable.getColumns().add(new TableColumn<>("code"));
         tablePane.getChildren().add(parserTable);
@@ -160,8 +160,34 @@ public class ParserController {
             }
         });
         List<File> files=bundles.stream().map(bundle -> Path.of(currentBundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
+        List<CompletableFuture> completableFutures=new ArrayList<>();
         for(File file : files){
-            processDirectory(file);
+            CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() ->{
+                try {
+                    processDirectory(file);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ConfigurationException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+            asyncCompletableFuture.exceptionally(ex -> {
+                return null;
+            });
+            completableFutures.add(asyncCompletableFuture);
+        }
+        CompletableFuture<Void> completableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+        completableFuture.exceptionally((ex)->{
+            return null;
+        });
+        completableFuture.get();
+        if(bundles!=null&&!bundles.isEmpty()) {
+            setBundle(bundles.get(0));
         }
         bundleSearchField.setOnKeyPressed(event -> {
             try {
@@ -194,6 +220,10 @@ public class ParserController {
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (ConfigurationException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
                     e.printStackTrace();
                 }
             }
@@ -300,12 +330,21 @@ public class ParserController {
                 bundleIterator.remove();
             }
         }
-        List<CompletableFuture> completableFutures=new ArrayList<>();
+        List<CompletableFuture<Void>> completableFutures=new ArrayList<>();
         for(Bundle bundle : bundles){
-            completableFutures.add(CompletableFuture.supplyAsync(() ->{
+            CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() ->{
                 File file=new File(bundle.getPath());
-                if(file.lastModified()!=bundle.getLastModified()) {
-                    File[] fileArray = file.listFiles();
+                File[] fileArray=file.listFiles();
+                long lastModified=-1;
+                boolean folderWasModified=file.lastModified()!=bundle.getLastModified();
+                boolean subFileMasModified=Arrays.stream(fileArray).anyMatch(subFile -> subFile.lastModified()!=bundle.getLastModified());
+                boolean wasModified=folderWasModified||subFileMasModified;
+                if(folderWasModified){
+                    lastModified=file.lastModified();
+                }else if(subFileMasModified) {
+                    lastModified=Arrays.stream(fileArray).filter(subFile -> subFile.lastModified()!=bundle.getLastModified()).map(subFile -> subFile.lastModified()).findFirst().orElse(-1L);
+                }
+                if(wasModified) {
                     if (fileArray != null) {
                         List<File> files = Arrays.stream(fileArray) //
                                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
@@ -328,11 +367,19 @@ public class ParserController {
                             e.printStackTrace();
                         }
                     }
+                    bundle.setLastModified(lastModified);
                 }
                 return null;
-            }));
+            });
+            asyncCompletableFuture.exceptionally(ex ->{
+                return null;
+            });
+            completableFutures.add(asyncCompletableFuture);
         }
         CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+        voidCompletableFuture.exceptionally((ex)->{
+            return null;
+        });
         voidCompletableFuture.get();
     }
 
@@ -594,25 +641,48 @@ public class ParserController {
         }
     }
 
-    @FXML private void openDirectory() throws IOException, ConfigurationException {
+    @FXML private void openDirectory() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         final DirectoryChooser directoryChooser=new DirectoryChooser();
         Stage stage= (Stage) anchorId.getScene().getWindow();
         File file=directoryChooser.showDialog(stage);
         processDirectory(file);
+        setBundle(bundles.get(0));
     }
 
-    private void processDirectory(File file) throws IOException, ConfigurationException {
+    private void processDirectory(File file) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         if(file!=null) {
             if (containsBundles(file)) {
                 processSingleBundleDirectory(file);
             } else {
                 File[] subFiles = file.listFiles();
+                List<CompletableFuture> completableFutures=new ArrayList<>();
                 for (File subFile : subFiles) {
-                    if (containsBundles(subFile)) {
-                        processBundleDirectory(subFile);
-                    }
+                    CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() -> {
+                        try {
+                            if (containsBundles(subFile)) {
+                                processBundleDirectory(subFile);
+                            }
+                        }catch (IllegalStateException e){
+
+                        }catch (NullPointerException e){
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (ConfigurationException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    });
+                    asyncCompletableFuture.exceptionally(ex ->{
+                        return null;
+                    });
+                    completableFutures.add(asyncCompletableFuture);
                 }
-                setBundle(bundles.get(0));
+                CompletableFuture<Void> completableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+                completableFuture.exceptionally((ex)->{
+                    return null;
+                });
+                completableFuture.get();
             }
         }
     }
@@ -636,7 +706,9 @@ public class ParserController {
     private List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
         List<Bundle> fileBundles = Arrays.stream(subFiles)
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
-                .filter(Predicate.not(subFile -> bundlesExist(getBundleName(subFile)))) //
+                .filter(Predicate.not(subFile -> { try {return bundlesExist(getBundleName(subFile));}catch (ConcurrentModificationException ex){
+                        return bundlesExist(getBundleName(subFile));}
+                })) //
                 .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),file.lastModified())) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
