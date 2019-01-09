@@ -133,6 +133,7 @@ public class ParserController {
         } catch (IOException | ExecutionException | InterruptedException e) {
             bundles = FXCollections.observableArrayList();
         }
+
         bundleChangeListener=(observable, oldValue, newValue) -> {
             if(newValue!=null){
                 try {
@@ -516,6 +517,7 @@ public class ParserController {
         tablePane.getChildren().add(parserTable);
         parserTable.prefWidthProperty().bind(tablePane.widthProperty());
         parserTable.prefHeightProperty().bind(tablePane.heightProperty());
+        parserTable.getSelectionModel().setCellSelectionEnabled(true);
         List<String> columnNames= new ArrayList<>(fileMap.keySet());
         sortFields(columnNames);
         List<String> searchOptions=new ArrayList<>();
