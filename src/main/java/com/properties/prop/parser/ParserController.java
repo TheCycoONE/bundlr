@@ -312,11 +312,9 @@ public class ParserController {
                     }
                     bundle.setFileMap(fileMap);
                     resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
-                    resources = fileService.loadRowData(files);
+                    List<Resource> resources = fileService.loadRowData(files);
                     resourceIndexService.reloadDocuments(bundle.getName(), resources);
                 }
-            }else {
-                resources=resourceIndexService.getAllResources(bundle.getName());
             }
         }
     }
