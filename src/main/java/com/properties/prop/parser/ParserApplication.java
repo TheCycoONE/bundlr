@@ -27,7 +27,7 @@ public class ParserApplication extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-		primaryStage.setTitle("Bundle Bee");
+		primaryStage.setTitle("BundleBee");
 		Scene scene = new Scene(root);
 		primaryStage.setScene(scene);
 		primaryStage.setMinWidth(1200);
