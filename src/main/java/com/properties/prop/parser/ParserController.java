@@ -174,15 +174,11 @@ public class ParserController {
                     }
                     return null;
                 });
-                asyncCompletableFuture.exceptionally(ex -> {
-                    return null;
-                });
+                asyncCompletableFuture.exceptionally(ex -> null);
                 completableFutures.add(asyncCompletableFuture);
             }
             CompletableFuture<Void> completableFuture = CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-            completableFuture.exceptionally((ex) -> {
-                return null;
-            });
+            completableFuture.exceptionally((ex) -> null);
             completableFuture.get();
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
@@ -370,15 +366,11 @@ public class ParserController {
                 }
                 return null;
             });
-            asyncCompletableFuture.exceptionally(ex ->{
-                return null;
-            });
+            asyncCompletableFuture.exceptionally(ex -> null);
             completableFutures.add(asyncCompletableFuture);
         }
         CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-        voidCompletableFuture.exceptionally((ex)->{
-            return null;
-        });
+        voidCompletableFuture.exceptionally((ex)-> null);
         voidCompletableFuture.get();
     }
 
@@ -675,15 +667,11 @@ public class ParserController {
                         }
                         return null;
                     });
-                    asyncCompletableFuture.exceptionally(ex ->{
-                        return null;
-                    });
+                    asyncCompletableFuture.exceptionally(ex -> null);
                     completableFutures.add(asyncCompletableFuture);
                 }
                 CompletableFuture<Void> completableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-                completableFuture.exceptionally((ex)->{
-                    return null;
-                });
+                completableFuture.exceptionally((ex)-> null);
                 completableFuture.get();
             }
         }
