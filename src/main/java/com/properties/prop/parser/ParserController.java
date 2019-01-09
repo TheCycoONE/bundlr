@@ -35,7 +35,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -128,7 +130,7 @@ public class ParserController {
             FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
             resourceIndexService.loadStores(bundles.stream().map(Bundle::getName).collect(Collectors.toList()));
             updateIndexes();
-        } catch (IOException e) {
+        } catch (IOException | ExecutionException | InterruptedException e) {
             bundles = FXCollections.observableArrayList();
         }
         bundleChangeListener=(observable, oldValue, newValue) -> {
@@ -287,7 +289,7 @@ public class ParserController {
         bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
     }
 
-    private void updateIndexes() throws IOException, ConfigurationException {
+    private void updateIndexes() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         Iterator<Bundle> bundleIterator=bundles.listIterator();
         while (bundleIterator.hasNext()){
             Bundle bundle=bundleIterator.next();
@@ -298,25 +300,40 @@ public class ParserController {
                 bundleIterator.remove();
             }
         }
+        List<CompletableFuture> completableFutures=new ArrayList<>();
         for(Bundle bundle : bundles){
-            File file=new File(bundle.getPath());
-            if(file.lastModified()!=bundle.getLastModified()) {
-                File[] fileArray = file.listFiles();
-                if (fileArray != null) {
-                    List<File> files = Arrays.stream(fileArray) //
-                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                            .collect(Collectors.toList());
-                    Map<String, String> fileMap = new LinkedHashMap<>();
-                    for (File currentFile : files) {
-                        fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+            completableFutures.add(CompletableFuture.supplyAsync(() ->{
+                File file=new File(bundle.getPath());
+                if(file.lastModified()!=bundle.getLastModified()) {
+                    File[] fileArray = file.listFiles();
+                    if (fileArray != null) {
+                        List<File> files = Arrays.stream(fileArray) //
+                                .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                                .collect(Collectors.toList());
+                        Map<String, String> fileMap = new LinkedHashMap<>();
+                        for (File currentFile : files) {
+                            fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+                        }
+                        bundle.setFileMap(fileMap);
+                        resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
+                        List<Resource> resources = null;
+                        try {
+                            resources = fileService.loadRowData(files);
+                        } catch (ConfigurationException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            resourceIndexService.reloadDocuments(bundle.getName(), resources);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
-                    bundle.setFileMap(fileMap);
-                    resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
-                    List<Resource> resources = fileService.loadRowData(files);
-                    resourceIndexService.reloadDocuments(bundle.getName(), resources);
                 }
-            }
+                return null;
+            }));
         }
+        CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+        voidCompletableFuture.get();
     }
 
     private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException {
