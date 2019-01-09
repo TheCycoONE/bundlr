@@ -3,6 +3,7 @@ package com.properties.prop.parser.service;
 import com.properties.prop.parser.factories.AnalyzerFactory;
 import com.properties.prop.parser.model.Bundle;
 import com.properties.prop.parser.model.DocumentStore;
+import com.properties.prop.parser.model.Resource;
 import com.properties.prop.parser.util.BundleDocumentConverter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -39,6 +40,11 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
     public void addBundles(List<Bundle> bundles) throws IOException {
         List<Document> documents=bundleDocumentConverter.convertAllToDocument(bundles);
         bundleStore.addDocuments(documents);
+    }
+
+    public void updateBundle(Bundle bundle) throws IOException {
+        Document document=bundleDocumentConverter.convertToDocument(bundle);
+        bundleStore.updateDocument("id",bundle.getId(),document);
     }
 
     public void deleteBundle(Bundle bundle) throws IOException {

@@ -13,4 +13,5 @@ public interface BundleService {
     ObservableList<Bundle> loadBundles() throws IOException;
     ObservableList<Bundle> searchBundles(String queryString) throws ParseException, IOException;
     void deleteBundle(Bundle bundle) throws IOException;
+    public void updateBundle(Bundle bundle) throws IOException;
 }

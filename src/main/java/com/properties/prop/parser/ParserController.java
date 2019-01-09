@@ -297,19 +297,23 @@ public class ParserController {
         }
         for(Bundle bundle : bundles){
             File file=new File(bundle.getPath());
-            File[] fileArray=file.listFiles();
-            if(fileArray!=null) {
-                List<File> files = Arrays.stream(fileArray) //
-                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                        .collect(Collectors.toList());
-                resources = fileService.loadRowData(files);
-                Map<String,String> fileMap=new LinkedHashMap<>();
-                for(File currentFile : files){
-                    fileMap.put(FilenameUtils.getBaseName(currentFile.getName()),currentFile.getPath());
+            if(file.lastModified()!=bundle.getLastModified()) {
+                File[] fileArray = file.listFiles();
+                if (fileArray != null) {
+                    List<File> files = Arrays.stream(fileArray) //
+                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                            .collect(Collectors.toList());
+                    Map<String, String> fileMap = new LinkedHashMap<>();
+                    for (File currentFile : files) {
+                        fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+                    }
+                    bundle.setFileMap(fileMap);
+                    resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
+                    resources = fileService.loadRowData(files);
+                    resourceIndexService.reloadDocuments(bundle.getName(), resources);
                 }
-                bundle.setFileMap(fileMap);
-                resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(),fileMap.keySet());
-                resourceIndexService.reloadDocuments(bundle.getName(), resources);
+            }else {
+                resources=resourceIndexService.getAllResources(bundle.getName());
             }
         }
     }
@@ -485,6 +489,9 @@ public class ParserController {
                                             tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
                                         }
                                         fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
+                                        long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
+                                        currentBundle.setLastModified(lastModified);
+                                        bundleService.updateBundle(currentBundle);
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -517,6 +524,9 @@ public class ParserController {
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
                             fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
+                            long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
+                            currentBundle.setLastModified(lastModified);
+                            bundleService.updateBundle(currentBundle);
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
@@ -605,7 +615,7 @@ public class ParserController {
         List<Bundle> fileBundles = Arrays.stream(subFiles)
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
                 .filter(Predicate.not(subFile -> bundlesExist(getBundleName(subFile)))) //
-                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
+                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),file.lastModified())) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
         bundles.addAll(fileBundles);
