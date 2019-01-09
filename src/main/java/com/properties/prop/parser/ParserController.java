@@ -158,8 +158,9 @@ public class ParserController {
             }
         });
         bundleBox.getSelectionModel().select(0);
-        if(currentBundle!=null) {
-            processDirectory(Path.of(currentBundle.getPath()).getParent().toFile());
+        List<File> files=bundles.stream().map(bundle -> Path.of(currentBundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
+        for(File file : files){
+            processDirectory(file);
         }
         bundleSearchField.setOnKeyPressed(event -> {
             try {
