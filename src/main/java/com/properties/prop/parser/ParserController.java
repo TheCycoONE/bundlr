@@ -720,6 +720,7 @@ public class ParserController {
         searchOptions.add("code");
         searchOptions.addAll(columnNames);
         searchResourcesMap = Collections.emptyMap();
+        searchOptionsBox.getItems().clear();
         searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
         searchOptionsBox.getSelectionModel().select(searchOption);
     }
@@ -755,6 +756,7 @@ public class ParserController {
             }
             List<String> options = new ArrayList<>(searchResourcesMap.keySet());
             sortFields(options);
+            searchOptionsBox.getItems().clear();
             searchOptionsBox.setItems(FXCollections.observableArrayList(options));
         }
     }
