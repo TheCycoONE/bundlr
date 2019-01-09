@@ -707,7 +707,7 @@ public class ParserController {
     }
 
     private synchronized List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
-        List<Bundle> fileBundles = Arrays.stream(subFiles)
+        List<Bundle> fileBundles = Arrays.stream(subFiles).parallel()
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
                 .filter(Predicate.not(subFile ->  bundlesExist(getBundleName(subFile)))
                 ) //
@@ -730,7 +730,7 @@ public class ParserController {
         return name.substring(0,name.length()-6);
     }
     private boolean bundlesExist(String name){
-        return bundles.stream().anyMatch(bundle -> bundle.getName().equals(name));
+        return bundles.stream().parallel().anyMatch(bundle -> bundle.getName().equals(name));
     }
 
     private void processBundleDirectory(File file) throws IOException, ConfigurationException {
