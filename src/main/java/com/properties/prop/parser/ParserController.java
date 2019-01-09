@@ -6,7 +6,7 @@ import com.properties.prop.parser.model.Tuple;
 import com.properties.prop.parser.service.BundleService;
 import com.properties.prop.parser.service.FileService;
 import com.properties.prop.parser.service.ResourceIndexService;
-import com.properties.prop.widget.EditCell3;
+import com.properties.prop.widget.EditCell;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -526,7 +526,7 @@ public class ParserController {
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
-        codeColumn.setCellFactory(param -> new EditCell3());
+        codeColumn.setCellFactory(column -> EditCell.createStringEditCell());
         codeColumn.setOnEditCommit((Event event) -> {
                     CellEditEvent<Resource, String> cellEditEvent = (CellEditEvent<Resource, String>) event;
                     Resource resource = (cellEditEvent).getTableView().getItems().get(
@@ -570,7 +570,7 @@ public class ParserController {
         );
         for(TableColumn tableColumn : tableColumns){
             tableColumn.setCellValueFactory((Callback<TableColumn.CellDataFeatures<Resource, String>, ObservableValue<String>>) r -> r.getValue().getProperty(tableColumn.getText()));
-            tableColumn.setCellFactory(param -> new EditCell3());
+            tableColumn.setCellFactory(column -> EditCell.createStringEditCell());
             tableColumn.setOnEditCommit((Event event) ->{
                 CellEditEvent<Resource,String> cellEditEvent=(CellEditEvent<Resource,String>) event;
                 Resource resource=(cellEditEvent).getTableView().getItems().get(
