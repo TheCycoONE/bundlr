@@ -158,6 +158,9 @@ public class ParserController {
             }
         });
         bundleBox.getSelectionModel().select(0);
+        if(currentBundle!=null) {
+            processDirectory(Path.of(currentBundle.getPath()).getParent().toFile());
+        }
         bundleSearchField.setOnKeyPressed(event -> {
             try {
                 triggerFilterBundles(event);
@@ -580,6 +583,10 @@ public class ParserController {
         final DirectoryChooser directoryChooser=new DirectoryChooser();
         Stage stage= (Stage) anchorId.getScene().getWindow();
         File file=directoryChooser.showDialog(stage);
+        processDirectory(file);
+    }
+
+    private void processDirectory(File file) throws IOException, ConfigurationException {
         if(file!=null) {
             if (containsBundles(file)) {
                 processSingleBundleDirectory(file);
