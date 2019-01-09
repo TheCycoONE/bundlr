@@ -521,12 +521,6 @@ public class ParserController {
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
         codeColumn.setCellFactory(column -> EditCell.createStringEditCell());
-        codeColumn.setOnEditStart(event -> {
-            setTraversable(false);
-        });
-        codeColumn.setOnEditCancel(event -> {
-            setTraversable(true);
-        });
         codeColumn.setOnEditCommit((Event event) -> {
                     CellEditEvent<Resource, String> cellEditEvent = (CellEditEvent<Resource, String>) event;
                     Resource resource = (cellEditEvent).getTableView().getItems().get(
@@ -548,7 +542,6 @@ public class ParserController {
                                         long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                                         currentBundle.setLastModified(lastModified);
                                         bundleService.updateBundle(currentBundle);
-                                        setTraversable(true);
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -571,12 +564,6 @@ public class ParserController {
         for(TableColumn tableColumn : tableColumns){
             tableColumn.setCellValueFactory((Callback<TableColumn.CellDataFeatures<Resource, String>, ObservableValue<String>>) r -> r.getValue().getProperty(tableColumn.getText()));
             tableColumn.setCellFactory(column -> EditCell.createStringEditCell());
-            tableColumn.setOnEditStart(event -> {
-                setTraversable(false);
-            });
-            tableColumn.setOnEditCancel(event -> {
-                setTraversable(true);
-            });
             tableColumn.setOnEditCommit((Event event) ->{
                 CellEditEvent<Resource,String> cellEditEvent=(CellEditEvent<Resource,String>) event;
                 Resource resource=(cellEditEvent).getTableView().getItems().get(
@@ -590,7 +577,6 @@ public class ParserController {
                             long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
                             currentBundle.setLastModified(lastModified);
                             bundleService.updateBundle(currentBundle);
-                            setTraversable(true);
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
