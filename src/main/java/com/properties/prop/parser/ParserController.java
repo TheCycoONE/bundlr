@@ -70,7 +70,7 @@ public class ParserController {
 
     private ObservableList<Resource> resources;
     private Bundle currentBundle;
-    private ObservableList<Bundle> bundles=FXCollections.observableArrayList(Collections.emptyList());
+    private ObservableList<Bundle> bundles=FXCollections.synchronizedObservableList(FXCollections.observableArrayList(Collections.emptyList()));
     private TableView parserTable;
     Map<String,ObservableList<Resource>> searchResourcesMap;
     private String searchOption;
@@ -145,10 +145,6 @@ public class ParserController {
             }
         };
         bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
-        bundleBox.setItems(bundles);
-        if(!bundles.isEmpty()){
-            setBundle(bundles.get(0));
-        }
         searchOptionsBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if(newValue!=null){
                 if(searchResourcesMap!=null&&!searchResourcesMap.isEmpty()){
@@ -159,34 +155,37 @@ public class ParserController {
                 }
             }
         });
-        List<File> files=bundles.stream().map(bundle -> Path.of(currentBundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
-        List<CompletableFuture> completableFutures=new ArrayList<>();
-        for(File file : files){
-            CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() ->{
-                try {
-                    processDirectory(file);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (ConfigurationException e) {
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            });
-            asyncCompletableFuture.exceptionally(ex -> {
-                return null;
-            });
-            completableFutures.add(asyncCompletableFuture);
-        }
-        CompletableFuture<Void> completableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-        completableFuture.exceptionally((ex)->{
-            return null;
-        });
-        completableFuture.get();
         if(bundles!=null&&!bundles.isEmpty()) {
+            currentBundle = bundles.get(0);
+            List<File> files = bundles.stream().map(bundle -> Path.of(currentBundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
+            List<CompletableFuture> completableFutures = new ArrayList<>();
+            for (File file : files) {
+                CompletableFuture<Void> asyncCompletableFuture = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        processDirectory(file);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                });
+                asyncCompletableFuture.exceptionally(ex -> {
+                    return null;
+                });
+                completableFutures.add(asyncCompletableFuture);
+            }
+            CompletableFuture<Void> completableFuture = CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+            completableFuture.exceptionally((ex) -> {
+                return null;
+            });
+            completableFuture.get();
+            FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+            bundleBox.setItems(bundles);
             setBundle(bundles.get(0));
         }
         bundleSearchField.setOnKeyPressed(event -> {
@@ -646,7 +645,10 @@ public class ParserController {
         Stage stage= (Stage) anchorId.getScene().getWindow();
         File file=directoryChooser.showDialog(stage);
         processDirectory(file);
-        setBundle(bundles.get(0));
+        FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+        if(bundles!=null&&!bundles.isEmpty()) {
+            setBundle(bundles.get(0));
+        }
     }
 
     private void processDirectory(File file) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
@@ -698,22 +700,22 @@ public class ParserController {
             File[] subFiles=file.listFiles();
             if(subFiles!=null) {
                 List<Bundle> fileBundles = getBundles(file, subFiles);
+                FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
                 bundleBox.getSelectionModel().select(fileBundles.get(0));
             }
         }
     }
 
-    private List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
+    private synchronized List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
         List<Bundle> fileBundles = Arrays.stream(subFiles)
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
-                .filter(Predicate.not(subFile -> { try {return bundlesExist(getBundleName(subFile));}catch (ConcurrentModificationException ex){
-                        return bundlesExist(getBundleName(subFile));}
-                })) //
+                .filter(Predicate.not(subFile ->  bundlesExist(getBundleName(subFile)))
+                ) //
                 .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),file.lastModified())) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
         bundles.addAll(fileBundles);
-        FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+
         bundleBox.setItems(bundles);
         bundleService.addBundles(fileBundles);
         return fileBundles;
