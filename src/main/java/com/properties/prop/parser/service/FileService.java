@@ -15,6 +15,6 @@ import java.util.concurrent.ExecutionException;
 
 public interface FileService {
     ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException;
-    void saveOrUpdateProperty(String filePath, String key, String value,long lastModified) throws IOException, ConfigurationException;
-    void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode,long lastModified) throws IOException, ConfigurationException;
+    void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException;
+    void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode) throws IOException, ConfigurationException;
 }

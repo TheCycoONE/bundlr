@@ -82,7 +82,6 @@ public class DocumentStore {
         if(analyzer!=null) {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(index, config);
-            List<IndexableField> fields = document.getFields();
             writer.updateDocument(new Term(key, value), document);
             writer.forceMergeDeletes();
             writer.commit();

@@ -329,10 +329,10 @@ public class ParserController {
                             .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
                             .collect(Collectors.toList());
                     long fileModified = file.lastModified();
-                    long subFileModified = files.stream().map(subFile -> subFile.lastModified()).findFirst().orElse(-1L);
-                    if (subFileModified != bundle.getLastModified()) {
+                    File subFileModified = files.stream().filter(subFile -> subFile.lastModified()!=bundle.getLastModified()).findFirst().orElse(null);
+                    if (subFileModified!=null&&subFileModified.lastModified() != bundle.getLastModified()) {
                         try {
-                            updateIndex(bundle, file, files, subFileModified);
+                            updateIndex(bundle, file, files, subFileModified.lastModified());
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -346,7 +346,6 @@ public class ParserController {
                 }
                 return null;
             });
-            asyncCompletableFuture.exceptionally(ex -> null);
             completableFutures.add(asyncCompletableFuture);
         }
         CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
@@ -559,8 +558,16 @@ public class ParserController {
                                         for (String key : fileMap.keySet()) {
                                             tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
                                         }
+                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
                                         currentBundle.setLastModified(Instant.now().toEpochMilli());
-                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode(),currentBundle.getLastModified());
+                                        File bundleFile=new File(currentBundle.getPath());
+                                        bundleFile.setLastModified(currentBundle.getLastModified());
+                                        bundleService.updateBundle(currentBundle);
+                                        List<File> files=fileMap.values().stream().map(File::new).collect(Collectors.toList());
+                                        for(File file : files){
+                                            file.setLastModified(currentBundle.getLastModified());
+                                        }
+                                        System.out.println();
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -592,8 +599,16 @@ public class ParserController {
                         resource.setProperty(tableColumn.getText(), cellEditEvent.getNewValue());
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
+                            fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
                             currentBundle.setLastModified(Instant.now().toEpochMilli());
-                            fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()),currentBundle.getLastModified());
+                            File bundleFile=new File(currentBundle.getPath());
+                            bundleFile.setLastModified(currentBundle.getLastModified());
+                            bundleService.updateBundle(currentBundle);
+                            List<File> files=fileMap.values().stream().map(File::new).collect(Collectors.toList());
+                            for(File file : files){
+                                file.setLastModified(currentBundle.getLastModified());
+                            }
+                            System.out.println();
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
