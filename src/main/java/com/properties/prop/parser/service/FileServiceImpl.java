@@ -74,19 +74,20 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException {
+    public void saveOrUpdateProperty(String filePath, String key, String value,long lastModified) throws IOException, ConfigurationException {
         File file = new File(filePath);
         PropertiesConfiguration config = new PropertiesConfiguration();
         PropertiesConfigurationLayout layout = new PropertiesConfigurationLayout(config);
         layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
         config.setProperty(key,new String(value.getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")));
         layout.save(new FileWriter(filePath, Charset.forName("ISO-8859-1"),false));
+        file.setLastModified(lastModified);
     }
 
     @Override
-    public void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode) throws IOException, ConfigurationException {
+    public void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode,long lastModified) throws IOException, ConfigurationException {
         for(Tuple fileKeyValuePair : codeValues){
-            updateKeyValue(code,newCode,fileKeyValuePair);
+            updateKeyValue(code,newCode,fileKeyValuePair,lastModified);
         }
     }
 
@@ -97,7 +98,7 @@ public class FileServiceImpl implements FileService {
         return layout;
     }
 
-    private void updateKeyValue(String code,String newCode,Tuple fileKeyValuePair) throws IOException, ConfigurationException {
+    private void updateKeyValue(String code,String newCode,Tuple fileKeyValuePair,long lastModified) throws IOException, ConfigurationException {
         File file = new File(fileKeyValuePair.getKey());
         PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
         layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
@@ -106,5 +107,6 @@ public class FileServiceImpl implements FileService {
             layout.getConfiguration().setProperty(newCode,new String(fileKeyValuePair.getValue().getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")) );
         }
         layout.save(new FileWriter(fileKeyValuePair.getKey(), Charset.forName("ISO-8859-1"),false));
+        file.setLastModified(lastModified);
     }
 }

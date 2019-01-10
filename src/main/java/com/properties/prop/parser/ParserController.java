@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -324,31 +325,17 @@ public class ParserController {
                 File file=new File(bundle.getPath());
                 File[] fileArray=file.listFiles();
                 if (fileArray != null) {
-                        List<File> files = Arrays.stream(fileArray) //
-                                .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                                .collect(Collectors.toList());
-                        Map<String, String> fileMap = new LinkedHashMap<>();
-                        for (File currentFile : files) {
-                            fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
-                        }
-                        bundle.setFileMap(fileMap);
-                        resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
-                        List<Resource> resources = null;
-                        try {
-                            resources = fileService.loadRowData(files);
-                        } catch (ConfigurationException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
-                        }
-                    try {
-                            resourceIndexService.reloadDocuments(bundle.getName(), resources);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                    List<File> files = Arrays.stream(fileArray) //
+                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                            .collect(Collectors.toList());
+                    long fileModified = file.lastModified();
+                    long subFileModified = files.stream().map(subFile -> subFile.lastModified()).findFirst().orElse(-1L);
+                    if (subFileModified != bundle.getLastModified()) {
+                        updateIndex(bundle, file, files, subFileModified);
+                    }else  if(fileModified != bundle.getLastModified()){
+                        updateIndex(bundle, file, files, fileModified);
                     }
+                }
                 return null;
             });
             asyncCompletableFuture.exceptionally(ex -> null);
@@ -357,6 +344,39 @@ public class ParserController {
         CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
         voidCompletableFuture.exceptionally((ex)-> null);
         voidCompletableFuture.get();
+    }
+
+    private void updateIndex(Bundle bundle, File file, List<File> files, long fileModified) {
+        updateIndex(bundle, files);
+        bundle.setLastModified(fileModified);
+        for (File subFile : files) {
+            subFile.setLastModified(fileModified);
+        }
+        file.setLastModified(fileModified);
+    }
+
+    private void updateIndex(Bundle bundle, List<File> files) {
+        Map<String, String> fileMap = new LinkedHashMap<>();
+        for (File currentFile : files) {
+            fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+        }
+        bundle.setFileMap(fileMap);
+        resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
+        List<Resource> resources = null;
+        try {
+            resources = fileService.loadRowData(files);
+        } catch (ConfigurationException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        try {
+            resourceIndexService.reloadDocuments(bundle.getName(), resources);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
@@ -530,7 +550,8 @@ public class ParserController {
                                         for (String key : fileMap.keySet()) {
                                             tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
                                         }
-                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
+                                        currentBundle.setLastModified(Instant.now().toEpochMilli());
+                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode(),currentBundle.getLastModified());
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -562,7 +583,8 @@ public class ParserController {
                         resource.setProperty(tableColumn.getText(), cellEditEvent.getNewValue());
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
-                            fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
+                            currentBundle.setLastModified(Instant.now().toEpochMilli());
+                            fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()),currentBundle.getLastModified());
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
@@ -583,19 +605,6 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
-    }
-
-    private void setTraversable(boolean b) {
-        bundleBox.setFocusTraversable(b);
-        searchOptionsBox.setFocusTraversable(b);
-        bundleSearchBtn.setFocusTraversable(b);
-        bundleSearchField.setFocusTraversable(b);
-        searchBar.setFocusTraversable(b);
-        resetFilterBtn.setFocusTraversable(b);
-        allBtn.setFocusTraversable(b);
-        deleteBundleBtn.setFocusTraversable(b);
-        openFolderBtn.setFocusTraversable(b);
-        searchResourcesBtn.setFocusTraversable(b);
     }
 
     private void setSortPolicy() {
@@ -692,7 +701,7 @@ public class ParserController {
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
                 .filter(Predicate.not(subFile ->  bundlesExist(getBundleName(subFile)))
                 ) //
-                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
+                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),file.lastModified())) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
         bundles.addAll(fileBundles);

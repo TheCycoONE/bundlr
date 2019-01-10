@@ -42,7 +42,7 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
         bundleStore.addDocuments(documents);
     }
 
-    public void updateBundle(Bundle bundle) throws IOException {
+    public synchronized void updateBundle(Bundle bundle) throws IOException {
         Document document=bundleDocumentConverter.convertToDocument(bundle);
         bundleStore.updateDocument("id",bundle.getId(),document);
     }
