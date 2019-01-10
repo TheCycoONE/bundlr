@@ -6,7 +6,6 @@ import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,7 +19,6 @@ public class BundleDocumentConverter {
         document.add(new TextField("name",bundle.getName(), Field.Store.YES));
         document.add(new NumericDocValuesField("size-name",bundle.getName().length()));
         document.add(new TextField("path",bundle.getPath(), Field.Store.YES));
-        document.add(new StringField("lastModified",String.valueOf(bundle.getLastModified()), Field.Store.YES));
         Set<Map.Entry<String,String>> fileEntries=bundle.getFileMap().entrySet();
         for(Map.Entry<String,String> entry : fileEntries){
             document.add(new TextField(entry.getKey(),entry.getValue(), Field.Store.YES));
@@ -33,8 +31,8 @@ public class BundleDocumentConverter {
         return document;
     }
     public Bundle convertToBundle(Document document){
-        Bundle bundle=new Bundle(document.get("name"),document.get("path"),document.get("id"),Long.valueOf(document.get("lastModified")));
-        List<String> forbbidenNames=List.of("name","path","id","lastModified");
+        Bundle bundle=new Bundle(document.get("name"),document.get("path"),document.get("id"));
+        List<String> forbbidenNames=List.of("name","path","id");
         List<IndexableField> remainingFields=document.getFields().stream().filter(Predicate.not(indexableField -> forbbidenNames.contains(indexableField.name()))).collect(Collectors.toList());
         Map<String,String> fileMap=bundle.getFileMap();
         for(IndexableField field : remainingFields){
