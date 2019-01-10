@@ -323,17 +323,7 @@ public class ParserController {
             CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() ->{
                 File file=new File(bundle.getPath());
                 File[] fileArray=file.listFiles();
-                long lastModified=-1;
-                boolean folderWasModified=file.lastModified()!=bundle.getLastModified();
-                boolean subFileMasModified=Arrays.stream(fileArray).anyMatch(subFile -> subFile.lastModified()!=bundle.getLastModified());
-                boolean wasModified=folderWasModified||subFileMasModified;
-                if(folderWasModified){
-                    lastModified=file.lastModified();
-                }else if(subFileMasModified) {
-                    lastModified=Arrays.stream(fileArray).filter(subFile -> subFile.lastModified()!=bundle.getLastModified()).map(subFile -> subFile.lastModified()).findFirst().orElse(-1L);
-                }
-                if(wasModified) {
-                    if (fileArray != null) {
+                if (fileArray != null) {
                         List<File> files = Arrays.stream(fileArray) //
                                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
                                 .collect(Collectors.toList());
@@ -355,8 +345,6 @@ public class ParserController {
                             e.printStackTrace();
                         }
                     }
-                    bundle.setLastModified(lastModified);
-                }
                 return null;
             });
             asyncCompletableFuture.exceptionally(ex -> null);
@@ -539,9 +527,6 @@ public class ParserController {
                                             tuples.add(new Tuple(fileMap.get(key), resource.getPropertyValue(key)));
                                         }
                                         fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
-                                        long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
-                                        currentBundle.setLastModified(lastModified);
-                                        bundleService.updateBundle(currentBundle);
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
@@ -574,9 +559,6 @@ public class ParserController {
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
                             fileService.saveOrUpdateProperty(currentBundle.getFileMap().get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
-                            long lastModified=Files.getLastModifiedTime(Path.of(currentBundle.getPath())).toMillis();
-                            currentBundle.setLastModified(lastModified);
-                            bundleService.updateBundle(currentBundle);
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ConfigurationException e) {
@@ -706,7 +688,7 @@ public class ParserController {
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
                 .filter(Predicate.not(subFile ->  bundlesExist(getBundleName(subFile)))
                 ) //
-                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),file.lastModified())) //
+                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
         bundles.addAll(fileBundles);
