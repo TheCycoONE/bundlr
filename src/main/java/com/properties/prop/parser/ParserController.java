@@ -331,9 +331,17 @@ public class ParserController {
                     long fileModified = file.lastModified();
                     long subFileModified = files.stream().map(subFile -> subFile.lastModified()).findFirst().orElse(-1L);
                     if (subFileModified != bundle.getLastModified()) {
-                        updateIndex(bundle, file, files, subFileModified);
+                        try {
+                            updateIndex(bundle, file, files, subFileModified);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }else  if(fileModified != bundle.getLastModified()){
-                        updateIndex(bundle, file, files, fileModified);
+                        try {
+                            updateIndex(bundle, file, files, fileModified);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
                 return null;
@@ -346,9 +354,10 @@ public class ParserController {
         voidCompletableFuture.get();
     }
 
-    private void updateIndex(Bundle bundle, File file, List<File> files, long fileModified) {
+    private void updateIndex(Bundle bundle, File file, List<File> files, long fileModified) throws IOException {
         updateIndex(bundle, files);
         bundle.setLastModified(fileModified);
+        bundleService.updateBundle(bundle);
         for (File subFile : files) {
             subFile.setLastModified(fileModified);
         }
