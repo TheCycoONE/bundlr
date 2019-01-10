@@ -58,7 +58,7 @@ public class DocumentStore {
             addDocuments(documents);
         }
     }
-    public void addDocuments(List<Document> documents)throws IOException {
+    public synchronized void addDocuments(List<Document> documents)throws IOException {
         if(analyzer!=null) {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(index, config);

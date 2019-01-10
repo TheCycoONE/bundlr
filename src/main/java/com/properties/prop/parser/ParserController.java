@@ -70,7 +70,7 @@ public class ParserController {
 
     private ObservableList<Resource> resources;
     private Bundle currentBundle;
-    private ObservableList<Bundle> bundles=FXCollections.synchronizedObservableList(FXCollections.observableArrayList(Collections.emptyList()));
+    private ObservableList<Bundle> bundles=FXCollections.observableArrayList(Collections.emptyList());
     private TableView parserTable;
     Map<String,ObservableList<Resource>> searchResourcesMap;
     private String searchOption;
