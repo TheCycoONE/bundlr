@@ -14,13 +14,16 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 @Service
 public class FileServiceImpl implements FileService {
 
-    public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException {
+    public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException {
         Set<String> keys=new LinkedHashSet<>();
-        Map<String,Resource> resourceMap=new LinkedHashMap<>();
+        Map<String,Resource> resourceMap=new ConcurrentHashMap<>();
         List<PropertiesConfiguration> propertiesConfigurations=new LinkedList<>();
         for (File file : files) {
             PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration(file);
@@ -30,24 +33,44 @@ public class FileServiceImpl implements FileService {
             }
             propertiesConfigurations.add(propertiesConfiguration);
         }
+        List<CompletableFuture<Void>> completableFutures=new ArrayList<>();
         for(PropertiesConfiguration propertiesConfiguration : propertiesConfigurations){
-            for(String key : keys){
-                String value=propertiesConfiguration.getString(key);
-                Resource resource;
-                if(resourceMap.containsKey(key)){
-                    resource=resourceMap.get(key);
-                }else {
-                    resource=new Resource(key);
-                    resourceMap.put(key, resource);
+            CompletableFuture<Void> completableFuture=CompletableFuture.supplyAsync(() -> {
+                List<CompletableFuture<Void>> keyFutures=new ArrayList<>();
+                for(String key : keys){
+                    CompletableFuture<Void> keyFuture=CompletableFuture.supplyAsync(() ->{
+                        String value=propertiesConfiguration.getString(key);
+                        Resource resource;
+                        if(resourceMap.containsKey(key)){
+                            resource=resourceMap.get(key);
+                        }else {
+                            resource=new Resource(key);
+                            resourceMap.put(key, resource);
+                        }
+                        String fileName= FilenameUtils.getBaseName(propertiesConfiguration.getFileName());
+                        if(value!=null){
+                            resource.setProperty(fileName,new String(value.getBytes(Charset.forName("ISO-8859-1")), Charset.forName("UTF-8")));
+                        }else {
+                            resource.setProperty(fileName,"");
+                        }
+                        return null;
+                    });
+                    keyFutures.add(keyFuture);
                 }
-                String fileName= FilenameUtils.getBaseName(propertiesConfiguration.getFileName());
-                if(value!=null){
-                    resource.setProperty(fileName,new String(value.getBytes(Charset.forName("ISO-8859-1")), Charset.forName("UTF-8")));
-                }else {
-                    resource.setProperty(fileName,"");
+                CompletableFuture<Void> mainKeyFuture=CompletableFuture.allOf(keyFutures.toArray(CompletableFuture[]::new));
+                try {
+                    mainKeyFuture.get();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
                 }
-            }
+                return null;
+            });
+            completableFutures.add(completableFuture);
         }
+        CompletableFuture<Void> mainFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
+        mainFuture.get();
         return FXCollections.observableArrayList(resourceMap.values());
     }
 

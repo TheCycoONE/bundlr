@@ -130,7 +130,7 @@ public class ParserController {
             if(newValue!=null){
                 try {
                     changeBundle(newValue);
-                } catch (IOException e) {
+                } catch (IOException | ExecutionException | InterruptedException e) {
                     e.printStackTrace();
                 } catch (ConfigurationException e) {
                     e.printStackTrace();
@@ -285,7 +285,7 @@ public class ParserController {
         }
     }
 
-    private void changeBundle(Bundle bundle) throws IOException, ConfigurationException {
+    private void changeBundle(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
             currentBundle = bundle;
             if (bundle.getFileMap().isEmpty()) {
                 updateStoreUI(bundle);
@@ -338,8 +338,12 @@ public class ParserController {
                             resources = fileService.loadRowData(files);
                         } catch (ConfigurationException e) {
                             e.printStackTrace();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
                         }
-                        try {
+                    try {
                             resourceIndexService.reloadDocuments(bundle.getName(), resources);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -355,7 +359,7 @@ public class ParserController {
         voidCompletableFuture.get();
     }
 
-    private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException {
+    private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         Map<String,String> fileMap=bundle.getFileMap();
         File file=new File(bundle.getPath());
         String bundleName=bundle.getName();
@@ -387,7 +391,7 @@ public class ParserController {
         }
     }
 
-    private void processBundleWithoutUI(Bundle bundle) throws IOException, ConfigurationException {
+    private void processBundleWithoutUI(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         Map<String,String> fileMap=bundle.getFileMap();
         File file=new File(bundle.getPath());
         String bundleName=bundle.getName();
@@ -438,7 +442,7 @@ public class ParserController {
         });
     }
 
-    private void loadData(String storeName,List<File> files) throws IOException, ConfigurationException {
+    private void loadData(String storeName,List<File> files) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         if(resources!=null) {
             resources.clear();
         }
@@ -454,7 +458,7 @@ public class ParserController {
         parserTable.setItems(resources);
         parserTable.getItems().add(new Resource(""));
     }
-    private void addResourcesToIndex(Bundle bundle,List<File> files) throws IOException, ConfigurationException {
+    private void addResourcesToIndex(Bundle bundle,List<File> files) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         String storeName=bundle.getName();
         if(!resourceIndexService.storeExists(storeName)){
             resourceIndexService.createStore(storeName);
@@ -645,7 +649,7 @@ public class ParserController {
                             if (containsBundles(subFile)) {
                                 processBundleDirectory(subFile);
                             }
-                        }catch (IllegalStateException e){
+                        }catch (IllegalStateException | ExecutionException | InterruptedException e){
 
                         }catch (NullPointerException e){
 
@@ -710,7 +714,7 @@ public class ParserController {
         return bundles.stream().parallel().anyMatch(bundle -> bundle.getName().equals(name));
     }
 
-    private void processBundleDirectory(File file) throws IOException, ConfigurationException {
+    private void processBundleDirectory(File file) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         if(file!=null) {
             if(file!=null) {
                 File[] subFiles=file.listFiles();

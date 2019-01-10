@@ -11,9 +11,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public interface FileService {
-    ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException;
+    ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException;
     void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException;
     void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode) throws IOException, ConfigurationException;
 }
