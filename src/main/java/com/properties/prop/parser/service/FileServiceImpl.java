@@ -48,7 +48,11 @@ public class FileServiceImpl implements FileService {
                         }
                 }
         }
-        return FXCollections.observableArrayList(resourceMap.values());
+        if(!resourceMap.values().isEmpty()) {
+            return FXCollections.observableArrayList(resourceMap.values());
+        }else {
+            return FXCollections.emptyObservableList();
+        }
     }
 
     @Override

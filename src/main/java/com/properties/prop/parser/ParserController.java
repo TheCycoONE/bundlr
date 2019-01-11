@@ -7,6 +7,7 @@ import com.properties.prop.parser.service.BundleService;
 import com.properties.prop.parser.service.FileService;
 import com.properties.prop.parser.service.ResourceIndexService;
 import com.properties.prop.widget.EditCell;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -31,13 +32,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -69,12 +67,14 @@ public class ParserController {
     @FXML private ComboBox searchOptionsBox;
 
     private ObservableList<Resource> resources;
+    private ExecutorService executor;
     private Bundle currentBundle;
-    private ObservableList<Bundle> bundles=FXCollections.observableArrayList(Collections.emptyList());
+    private ObservableList<Bundle> bundles=FXCollections.synchronizedObservableList(FXCollections.observableArrayList(Collections.emptyList()));
     private TableView parserTable;
-    Map<String,ObservableList<Resource>> searchResourcesMap;
+    private Map<String,ObservableList<Resource>> searchResourcesMap;
     private String searchOption;
     private ChangeListener<Bundle> bundleChangeListener;
+    private AtomicBoolean fromWithin=new AtomicBoolean(false);
 
     @Autowired
     private FileService fileService;
@@ -86,7 +86,7 @@ public class ParserController {
     private BundleService bundleService;
 
     @FXML
-    public void initialize() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+    private void initialize() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         parserTable=new TableView<Resource>();
         parserTable.getColumns().add(new TableColumn<>("code"));
         tablePane.getChildren().add(parserTable);
@@ -121,8 +121,7 @@ public class ParserController {
             bundles=bundleService.loadBundles();
             FXCollections.sort(bundles,Comparator.comparing(Bundle::getName));
             resourceIndexService.loadStores(bundles.stream().map(Bundle::getName).collect(Collectors.toList()));
-            updateIndexes();
-        } catch (IOException | ExecutionException | InterruptedException e) {
+        } catch (IOException ex) {
             bundles = FXCollections.observableArrayList();
         }
 
@@ -150,7 +149,7 @@ public class ParserController {
         });
         if(bundles!=null&&!bundles.isEmpty()) {
             currentBundle = bundles.get(0);
-            List<File> files = bundles.stream().map(bundle -> Path.of(currentBundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
+            List<File> files = bundles.stream().map(bundle -> Path.of(bundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
             List<CompletableFuture> completableFutures = new ArrayList<>();
             for (File file : files) {
                 CompletableFuture<Void> asyncCompletableFuture = CompletableFuture.supplyAsync(() -> {
@@ -176,6 +175,7 @@ public class ParserController {
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
             setBundle(bundles.get(0));
+            addBundleWatchers();
         }
         bundleSearchField.setOnKeyPressed(event -> {
             try {
@@ -307,7 +307,10 @@ public class ParserController {
         bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
     }
 
-    private void updateIndexes() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+    private void addBundleWatchers() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+        if(executor!=null){
+            executor.shutdownNow();
+        }
         Iterator<Bundle> bundleIterator=bundles.listIterator();
         while (bundleIterator.hasNext()){
             Bundle bundle=bundleIterator.next();
@@ -318,48 +321,102 @@ public class ParserController {
                 bundleIterator.remove();
             }
         }
-        List<CompletableFuture<Void>> completableFutures=new ArrayList<>();
-        for(Bundle bundle : bundles){
-            CompletableFuture<Void> asyncCompletableFuture=CompletableFuture.supplyAsync(() ->{
-                File file=new File(bundle.getPath());
-                File[] fileArray=file.listFiles();
-                if (fileArray != null) {
-                    List<File> files = Arrays.stream(fileArray) //
-                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                            .collect(Collectors.toList());
-                    Map<String, String> fileMap = new LinkedHashMap<>();
-                    for (File currentFile : files) {
-                        fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+        executor = Executors.newFixedThreadPool(bundles.size());
+        for(Bundle bundle : bundles) {
+            Runnable runnable=() -> {
+                try {
+                    WatchService watchService = FileSystems.getDefault().newWatchService();
+                    Path filePath = Path.of(bundle.getPath());
+                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+                    WatchKey key;
+                    while ((key = watchService.take()) != null) {
+                            if (!key.pollEvents().isEmpty()) {
+                                if (!fromWithin.get()) {
+                                    File file = new File(bundle.getPath());
+                                    if (file.exists()) {
+                                        File[] fileArray = file.listFiles();
+                                        if (fileArray != null) {
+                                            List<File> files = Arrays.stream(fileArray) //
+                                                    .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                                                    .collect(Collectors.toList());
+                                            Map<String, String> fileMap = new LinkedHashMap<>();
+                                            for (File currentFile : files) {
+                                                fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+                                            }
+                                            bundle.setFileMap(fileMap);
+                                            resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
+                                            List<Resource> resources = null;
+                                            try {
+                                                resources = fileService.loadRowData(files);
+                                            } catch (ConfigurationException e) {
+                                                e.printStackTrace();
+                                            } catch (InterruptedException e) {
+                                                e.printStackTrace();
+                                            } catch (ExecutionException e) {
+                                                e.printStackTrace();
+                                            }
+                                            try {
+                                                resourceIndexService.reloadDocuments(bundle.getName(), resources);
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                            if (currentBundle == bundle) {
+                                                Platform.runLater(() -> {
+                                                    try {
+                                                        changeBundle(currentBundle);
+                                                    } catch (IOException e) {
+                                                        e.printStackTrace();
+                                                    } catch (ConfigurationException e) {
+                                                        e.printStackTrace();
+                                                    } catch (ExecutionException e) {
+                                                        e.printStackTrace();
+                                                    } catch (InterruptedException e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    } else {
+                                        if(currentBundle==bundle) {
+                                            bundleService.deleteBundle(bundle);
+                                            Platform.runLater(() -> {
+                                                try {
+                                                    if (bundles != null && !bundles.isEmpty()) {
+                                                        bundles.remove(bundle);
+                                                        changeBundle(bundles.get(0));
+                                                    }
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                } catch (ConfigurationException e) {
+                                                    e.printStackTrace();
+                                                } catch (ExecutionException e) {
+                                                    e.printStackTrace();
+                                                } catch (InterruptedException e) {
+                                                    e.printStackTrace();
+                                                }
+                                            });
+                                        }
+                                    }
+                                }else {
+                                    fromWithin.set(false);
+                                }
+                                key.reset();
+                            }
                     }
-                    bundle.setFileMap(fileMap);
-                    resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
-                    List<Resource> resources = null;
-                    try {
-                        resources = fileService.loadRowData(files);
-                    } catch (ConfigurationException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        resourceIndexService.reloadDocuments(bundle.getName(), resources);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+
                 }
-                return null;
-            });
-            completableFutures.add(asyncCompletableFuture);
+            };
+            executor.execute(runnable);
         }
-        CompletableFuture<Void> voidCompletableFuture=CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-        voidCompletableFuture.exceptionally((ex)-> null);
-        voidCompletableFuture.get();
     }
-
-
-
+    public void shutdownWatchers(){
+        if(executor!=null){
+            executor.shutdownNow();
+        }
+    }
 
     private void updateStoreUI(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         Map<String,String> fileMap=bundle.getFileMap();
@@ -544,6 +601,7 @@ public class ParserController {
                                         for (String key : bundleFileMap.keySet()) {
                                             tuples.add(new Tuple(bundleFileMap.get(key), resource.getPropertyValue(key)));
                                         }
+                                        fromWithin.set(true);
                                         fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
@@ -577,6 +635,7 @@ public class ParserController {
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
                             Map<String,String> bundleFileMap=currentBundle.getFileMap();
+                            fromWithin.set(true);
                             fileService.saveOrUpdateProperty(bundleFileMap.get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -635,6 +694,7 @@ public class ParserController {
         if(bundles!=null&&!bundles.isEmpty()) {
             setBundle(bundles.get(0));
         }
+        addBundleWatchers();
     }
 
     private void processDirectory(File file) throws IOException, ConfigurationException, ExecutionException, InterruptedException {

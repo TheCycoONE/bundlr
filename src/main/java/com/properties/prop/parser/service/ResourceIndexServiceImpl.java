@@ -57,7 +57,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
+    public synchronized void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
         if(stores.containsKey(storeName)){
             List<Document> documents=resourceDocumentConverter.convertAllToDocument(resources);
             DocumentStore documentStore=stores.get(storeName);
@@ -106,7 +106,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         if(stores.containsKey(storeName)) {
             DocumentStore documentStore = stores.get(storeName);
             Map<String,List<Document>> documentsMap = documentStore.searchIndex(queryString,fieldsArray,notSortedWord);
-            Map<String,ObservableList<Resource>> resourcesMap = documentsMap.entrySet().stream().collect(Collectors.toMap(entry->entry.getKey(),entry->FXCollections.observableArrayList(resourceDocumentConverter.convertAllToResource(entry.getValue()))));
+            Map<String,ObservableList<Resource>> resourcesMap = documentsMap.entrySet().stream().collect(Collectors.toMap(entry->entry.getKey(),entry->FXCollections.synchronizedObservableList(FXCollections.observableArrayList(resourceDocumentConverter.convertAllToResource(entry.getValue())))));
             return resourcesMap;
         }
         return new LinkedHashMap<>();
@@ -129,8 +129,8 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
             DocumentStore documentStore = stores.get(storeName);
             List<Document> documents = documentStore.getAllDocuments();
             List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
-            return FXCollections.observableArrayList(resources);
+            return FXCollections.synchronizedObservableList(FXCollections.observableArrayList(resources));
         }
-        return FXCollections.emptyObservableList();
+        return FXCollections.synchronizedObservableList(FXCollections.emptyObservableList());
     }
 }
