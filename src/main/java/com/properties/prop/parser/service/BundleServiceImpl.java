@@ -3,7 +3,6 @@ package com.properties.prop.parser.service;
 import com.properties.prop.parser.factories.AnalyzerFactory;
 import com.properties.prop.parser.model.Bundle;
 import com.properties.prop.parser.model.DocumentStore;
-import com.properties.prop.parser.model.Resource;
 import com.properties.prop.parser.util.BundleDocumentConverter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -33,11 +32,11 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
         bundleStore.setAnalyzer(analyzerFactory.createAnalyzer());
     }
 
-    public void addBundle(Bundle bundle) throws IOException {
+    public synchronized void addBundle(Bundle bundle) throws IOException {
         Document document=bundleDocumentConverter.convertToDocument(bundle);
         bundleStore.addDocument(document);
     }
-    public void addBundles(List<Bundle> bundles) throws IOException {
+    public synchronized void addBundles(List<Bundle> bundles) throws IOException {
         List<Document> documents=bundleDocumentConverter.convertAllToDocument(bundles);
         bundleStore.addDocuments(documents);
     }
@@ -47,7 +46,7 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
         bundleStore.updateDocument("id",bundle.getId(),document);
     }
 
-    public void deleteBundle(Bundle bundle) throws IOException {
+    public synchronized void deleteBundle(Bundle bundle) throws IOException {
         bundleStore.deleteDocument("id",bundle.getId());
     }
 

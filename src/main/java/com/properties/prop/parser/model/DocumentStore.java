@@ -10,7 +10,6 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.LockObtainFailedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +33,7 @@ public class DocumentStore {
     public void setAnalyzer(Analyzer analyzer){
         this.analyzer=analyzer;
     }
-    public void clearAll() throws IOException {
+    public synchronized void clearAll() throws IOException {
         if(analyzer!=null) {
             if (DirectoryReader.indexExists(index)) {
                 IndexWriterConfig config = new IndexWriterConfig(analyzer);
@@ -52,7 +51,7 @@ public class DocumentStore {
             FileUtils.deleteDirectory(new File(indexLocation));
         }
     }
-    public void reloadDocuments(List<Document> documents) throws IOException {
+    public synchronized void reloadDocuments(List<Document> documents) throws IOException {
         if(analyzer!=null) {
             clearAll();
             addDocuments(documents);
@@ -98,7 +97,7 @@ public class DocumentStore {
             writer.close();
         }
     }
-    public void deleteDocuments(String key,List<String> values) throws IOException {
+    public synchronized void deleteDocuments(String key,List<String> values) throws IOException {
         for(String value : values){
             deleteDocument(key,value);
         }
@@ -167,7 +166,7 @@ public class DocumentStore {
         return Collections.emptyList();
     }
 
-    public List<Document> getAllDocuments() throws IOException {
+    public synchronized List<Document> getAllDocuments() throws IOException {
         Query query=new MatchAllDocsQuery();
         IndexReader reader= DirectoryReader.open(index);
         int numOfDocs=reader.numDocs() !=0 ? reader.numDocs() : 1;

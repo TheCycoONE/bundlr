@@ -57,7 +57,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public synchronized void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
+    public void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
         if(stores.containsKey(storeName)){
             List<Document> documents=resourceDocumentConverter.convertAllToDocument(resources);
             DocumentStore documentStore=stores.get(storeName);
@@ -95,7 +95,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public void deleteStore(String storeName) throws IOException {
+    public synchronized void deleteStore(String storeName) throws IOException {
         if(stores.containsKey(storeName)){
             stores.get(storeName).clearAll();
             stores.remove(storeName);
