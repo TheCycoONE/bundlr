@@ -77,7 +77,7 @@ public class DocumentStore {
             writer.close();
         }
     }
-    public void updateDocument(String key,String value,Document document) throws IOException {
+    public synchronized void updateDocument(String key,String value,Document document) throws IOException {
         if(analyzer!=null) {
             IndexWriterConfig config = new IndexWriterConfig(analyzer);
             IndexWriter writer = new IndexWriter(index, config);

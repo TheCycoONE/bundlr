@@ -33,9 +33,10 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -77,7 +78,7 @@ public class ParserController {
     private TreeSet<Bundle> sortedBundles;
     private String searchOption;
     private ChangeListener<Bundle> bundleChangeListener;
-    private AtomicBoolean fromWithin=new AtomicBoolean(false);
+    private volatile boolean internalChange = false;
 
     @Autowired
     private FileService fileService;
@@ -174,6 +175,7 @@ public class ParserController {
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
             setBundle(bundles.get(0));
+            updateIndexes();
             loadBundleWatchers();
             loadFolderWatchers();
         }
@@ -346,11 +348,7 @@ public class ParserController {
             folderWatcherExecutor.execute(runnable);
         }
     }
-
-    private void loadBundleWatchers() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
-        if (bundleWatchersExecutor != null) {
-            bundleWatchersExecutor.shutdownNow();
-        }
+    private void updateIndexes() throws IOException, ExecutionException, InterruptedException {
         Iterator<Bundle> bundleIterator = bundles.listIterator();
         while (bundleIterator.hasNext()) {
             Bundle bundle = bundleIterator.next();
@@ -359,7 +357,81 @@ public class ParserController {
                 resourceIndexService.deleteStore(bundle.getName());
                 bundleService.deleteBundle(bundle);
                 bundleIterator.remove();
+            }else{
+                try (Stream<Path> paths = Files.walk(Path.of(bundle.getPath()))){
+                    updateFileMap(bundle,paths);
+                }
+                if(bundle.getFileMap()==null||bundle.getFileMap().isEmpty()){
+                    resourceIndexService.deleteStore(bundle.getName());
+                    bundleService.deleteBundle(bundle);
+                    bundleIterator.remove();
+                }
             }
+        }
+        List<CompletableFuture<Void>> bundleFutures=new ArrayList<>();
+        for(Bundle bundle : bundles){
+            CompletableFuture<Void> bundleFuture=CompletableFuture.supplyAsync(() -> {
+                try {
+                    FileTime bundleModifiedTime=Files.getLastModifiedTime(Path.of(bundle.getPath()));
+                    Map<String, String> fileMap = bundle.getFileMap();
+                    boolean wasModified=false;
+                    if(bundle.getLastModified()!=bundleModifiedTime.toMillis()){
+                        wasModified=true;
+                    }else {
+                        if (!fileMap.isEmpty()) {
+                            Collection<String> filePathStrings = fileMap.values();
+                            for (String filePathString : filePathStrings) {
+                                Path path = Path.of(filePathString);
+                                FileTime fileTime = Files.getLastModifiedTime(path);
+                                if (fileTime != null) {
+                                    if (bundle.getLastModified() != fileTime.toMillis()) {
+                                        bundleModifiedTime = fileTime;
+                                        wasModified = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(wasModified){
+                        File file = new File(bundle.getPath());
+                        if (file.exists()) {
+                            File[] fileArray = file.listFiles();
+                            if (fileArray != null) {
+                                List<File> files = Arrays.stream(fileArray) //
+                                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                                        .collect(Collectors.toList());
+                                updateBundleIndex(bundle, files, fileMap);
+                                long bundleModifiedLong=bundleModifiedTime.toMillis();
+                                bundle.setLastModified(bundleModifiedLong);
+                                bundleService.updateBundle(bundle);
+                                Path folderPath=Path.of(bundle.getPath());
+                                lockFileWatcher();
+                                Files.setLastModifiedTime(folderPath,bundleModifiedTime);
+                                lockFileWatcher();
+                                Collection<String> filePathStrings = fileMap.values();
+                                for (String filePathString : filePathStrings) {
+                                    Path path = Path.of(filePathString);
+                                    Files.setLastModifiedTime(path,bundleModifiedTime);
+                                }
+
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+            bundleFutures.add(bundleFuture);
+        }
+        CompletableFuture<Void> mainBundleFuture=CompletableFuture.allOf(bundleFutures.toArray(CompletableFuture[]::new));
+        mainBundleFuture.get();
+        System.out.println();
+    }
+    private void loadBundleWatchers() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+        if (bundleWatchersExecutor != null) {
+            bundleWatchersExecutor.shutdownNow();
         }
         bundleWatchersExecutor = Executors.newFixedThreadPool(bundles.size());
         List<Path> paths = bundles.stream().map(bundle -> Path.of(bundle.getPath())).collect(Collectors.toList());
@@ -370,83 +442,81 @@ public class ParserController {
                     filePath.register(watchService, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
                     WatchKey key;
                     while ((key = watchService.take()) != null) {
-                        for (WatchEvent<?> event : key.pollEvents()) {
-                            if (!fromWithin.get()) {
-                                Path path = filePath.resolve(event.context().toString());
-                                String pathString = path.toString();
-                                File potentialFile = path.toFile();
-                                String fileName = FilenameUtils.getBaseName(pathString);
-                                String extension = FilenameUtils.getExtension(pathString);
-                                boolean isPropertiesFile = extension.equals("properties");
-                                Bundle bundle = bundles.stream().filter(currentBundle -> fileName.startsWith(currentBundle.getName())).findFirst().orElse(null);
-                                if (bundle != null) {
-                                    File file = new File(bundle.getPath());
-                                    if (file.exists()) {
-                                        File[] fileArray = file.listFiles();
-                                        if (fileArray != null) {
-                                            List<File> files = Arrays.stream(fileArray) //
-                                                    .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                                                    .collect(Collectors.toList());
-                                            Map<String, String> fileMap = new LinkedHashMap<>();
-                                            for (File currentFile : files) {
-                                                fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
-                                            }
-                                            bundle.setFileMap(fileMap);
-                                            resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
-                                            List<Resource> resources = null;
-                                            try {
-                                                resources = fileService.loadRowData(files);
-                                            } catch (ConfigurationException | ExecutionException e) {
-                                                e.printStackTrace();
-                                            } catch (InterruptedException ignored) {
+                        List<WatchEvent<?>> events = key.pollEvents();
+                        if (events!=null&&!events.isEmpty()) {
+                            for (WatchEvent<?> event : events) {
+                                if (!internalChange) {
+                                    Path path = filePath.resolve(event.context().toString());
+                                    String pathString = path.toString();
+                                    File potentialFile = path.toFile();
+                                    String fileName = FilenameUtils.getBaseName(pathString);
+                                    String extension = FilenameUtils.getExtension(pathString);
+                                    boolean isPropertiesFile = extension.equals("properties");
+                                    Bundle bundle = bundles.stream().filter(currentBundle -> fileName.startsWith(currentBundle.getName())).findFirst().orElse(null);
+                                    if (bundle != null) {
+                                        File file = new File(bundle.getPath());
+                                        if (file.exists()) {
+                                            File[] fileArray = file.listFiles();
+                                            if (fileArray != null) {
+                                                List<File> files = Arrays.stream(fileArray) //
+                                                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                                                        .collect(Collectors.toList());
+                                                Map<String, String> fileMap = new LinkedHashMap<>();
+                                                for (File currentFile : files) {
+                                                    fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+                                                }
+                                                bundle.setFileMap(fileMap);
+                                                updateBundleIndex(bundle, files, fileMap);
+                                                if (currentBundle == bundle) {
+                                                    Platform.runLater(() -> {
+                                                        try {
+                                                            changeBundle(currentBundle);
+                                                        } catch (IOException | ExecutionException | ConfigurationException e) {
+                                                            e.printStackTrace();
+                                                        } catch (InterruptedException ignored) {
 
+                                                        }
+                                                    });
+                                                }
                                             }
-                                            try {
-                                                resourceIndexService.reloadDocuments(bundle.getName(), resources);
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
-                                            }
+                                            Platform.runLater(() -> {
+                                                try {
+                                                    updateLastModifiedTime(bundle.getPath());
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                            });
+                                        } else {
+                                            bundleService.deleteBundle(bundle);
+                                            resourceIndexService.deleteStore(bundle.getName());
+                                            Platform.runLater(() -> bundles.remove(bundle));
                                             if (currentBundle == bundle) {
                                                 Platform.runLater(() -> {
-                                                    try {
-                                                        changeBundle(currentBundle);
-                                                    } catch (IOException | ExecutionException | ConfigurationException e) {
-                                                        e.printStackTrace();
-                                                    } catch (InterruptedException ignored) {
+                                                    if (bundles != null && !bundles.isEmpty()) {
+                                                        try {
+                                                            changeBundle(bundles.get(0));
+                                                        } catch (IOException | ExecutionException | ConfigurationException e) {
+                                                            e.printStackTrace();
+                                                        } catch (InterruptedException e) {
 
+                                                        }
                                                     }
                                                 });
                                             }
                                         }
-                                    } else {
-                                        bundleService.deleteBundle(bundle);
-                                        resourceIndexService.deleteStore(bundle.getName());
-                                        Platform.runLater(() -> bundles.remove(bundle));
-                                        if (currentBundle == bundle) {
-                                            Platform.runLater(() -> {
-                                                if (bundles != null && !bundles.isEmpty()) {
-                                                    try {
-                                                        changeBundle(bundles.get(0));
-                                                    } catch (IOException | ExecutionException | ConfigurationException e) {
-                                                        e.printStackTrace();
-                                                    } catch (InterruptedException e) {
-
-                                                    }
-                                                }
-                                            });
-                                        }
+                                    } else if (!isPropertiesFile) {
+                                        processDirectory(potentialFile, false);
+                                        Platform.runLater(() -> {
+                                            setBundle(currentBundle);
+                                        });
                                     }
-                                } else if (!isPropertiesFile) {
-                                    processDirectory(potentialFile,false);
-                                    Platform.runLater(() -> {
-                                        setBundle(currentBundle);
-                                    });
                                 }
-                            } else {
-                                fromWithin.set(false);
                             }
                         }
                         key.reset();
+                        Platform.runLater(() -> {
+                            releaseFileWatcher();
+                        });
                     }
                 } catch (IOException | ExecutionException | ConfigurationException e) {
                     e.printStackTrace();
@@ -457,6 +527,28 @@ public class ParserController {
             bundleWatchersExecutor.execute(runnable);
         }
     }
+
+    private void lockFileWatcher() {
+        internalChange = true;
+    }
+
+    private synchronized void updateBundleIndex(Bundle bundle, List<File> files, Map<String, String> fileMap) {
+        resourceIndexService.createLanguageBasedAnalyzer(bundle.getName(), fileMap.keySet());
+        List<Resource> resources = null;
+        try {
+            resources = fileService.loadRowData(files);
+        } catch (ConfigurationException | ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException ignored) {
+
+        }
+        try {
+            resourceIndexService.reloadDocuments(bundle.getName(), resources);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void shutdownWatchers(){
         if(bundleWatchersExecutor !=null){
             bundleWatchersExecutor.shutdownNow();
@@ -478,7 +570,8 @@ public class ParserController {
                             .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
                             .collect(Collectors.toList());
                     try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
-                        updateFileMap(bundle.getName(),fileMap, paths);
+                        updateFileMap(bundle,paths);
+                        updateLastModifiedTime(bundle.getPath());
                         changeColumnNames(fileMap);
                         loadData(bundle.getName(), files);
                     }
@@ -487,10 +580,11 @@ public class ParserController {
         }
     }
 
-    private void updateFileMap(String bundleName,Map<String, String> fileMap, Stream<Path> paths) {
+    private void updateFileMap(Bundle bundle,Stream<Path> paths) throws IOException {
+        Map<String,String> fileMap=bundle.getFileMap();
         List<Path> pathList = paths
                 .filter(Files::isRegularFile)
-                .filter(filePath -> FilenameUtils.getBaseName(filePath.toString()).startsWith(bundleName))
+                .filter(filePath -> FilenameUtils.getBaseName(filePath.toString()).startsWith(bundle.getName()))
                 .filter(filePath -> FilenameUtils.getExtension(filePath.toString()).equals("properties"))
                 .collect(Collectors.toList());
         for (Path path : pathList) {
@@ -509,7 +603,8 @@ public class ParserController {
                         .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
                         .collect(Collectors.toList());
                 try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
-                    updateFileMap(bundle.getName(),fileMap, paths);
+                    updateFileMap(bundle,paths);
+                    updateLastModifiedTime(bundle.getPath());
                     addResourcesToIndex(bundle,files);
                 }
             }
@@ -634,14 +729,13 @@ public class ParserController {
                                         for (String key : bundleFileMap.keySet()) {
                                             tuples.add(new Tuple(bundleFileMap.get(key), resource.getPropertyValue(key)));
                                         }
-                                        fromWithin.set(true);
+                                        lockFileWatcher();
                                         fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
+                                        updateLastModifiedTime(currentBundle.getPath());
                                     } else {
                                         parserTable.getItems().add(new Resource(""));
                                     }
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                } catch (ConfigurationException e) {
+                                } catch (IOException | ConfigurationException e) {
                                     e.printStackTrace();
                                 }
                             }else{
@@ -668,11 +762,10 @@ public class ParserController {
                         try {
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
                             Map<String,String> bundleFileMap=currentBundle.getFileMap();
-                            fromWithin.set(true);
+                            lockFileWatcher();
                             fileService.saveOrUpdateProperty(bundleFileMap.get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (ConfigurationException e) {
+                            updateLastModifiedTime(currentBundle.getPath());
+                        } catch (IOException | ConfigurationException e) {
                             e.printStackTrace();
                         }
                     }else{
@@ -691,6 +784,33 @@ public class ParserController {
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
     }
+
+    private void releaseFileWatcher() {
+        internalChange = false;
+    }
+
+    private void updateLastModifiedTime(String pathString) throws IOException {
+            long lastModified = Instant.now().toEpochMilli();
+            List<Bundle> affectedBundles=bundles.stream().filter(bundle -> bundle.getPath().equals(pathString)).collect(Collectors.toList());
+            for(Bundle bundle : affectedBundles) {
+                bundle.setLastModified(lastModified);
+                bundleService.updateBundle(bundle);
+                FileTime bundleFileTime = FileTime.fromMillis(bundle.getLastModified());
+                lockFileWatcher();
+                Path filePath = Path.of(bundle.getPath());
+                Files.setLastModifiedTime(filePath, bundleFileTime);
+                lockFileWatcher();
+                Map<String, String> fileMap = bundle.getFileMap();
+                if (fileMap != null && !fileMap.isEmpty()) {
+                    Collection<String> filePathStrings = bundle.getFileMap().values();
+                    for (String filePathString : filePathStrings) {
+                        Path path = Path.of(filePathString);
+                        Files.setLastModifiedTime(path, bundleFileTime);
+                    }
+                }
+            }
+    }
+
     private void setSortPolicy() {
         parserTable.sortPolicyProperty().set((Callback<TableView<Resource>, Boolean>) param -> {
             Comparator<Resource> comparator = (o1, o2) -> o1.getCode().equals("") ? 1
@@ -799,15 +919,17 @@ public class ParserController {
     }
 
     private synchronized List<Bundle> getBundles(File file, File[] subFiles) throws IOException {
+        Path filePath=file.toPath();
+        FileTime lastModifiedFileTime=Files.getLastModifiedTime(filePath);
+        long lastModified=lastModifiedFileTime.toMillis();
         List<Bundle> fileBundles = Arrays.stream(subFiles).parallel()
                 .filter(subFile -> FilenameUtils.getBaseName(subFile.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}"))
                 .filter(Predicate.not(subFile ->  bundlesExist(getBundleName(subFile)))
                 ) //
-                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath())) //
+                .map(subFile -> new Bundle(getBundleName(subFile), file.getPath(),lastModified)) //
                 .filter(distinctByKey(Bundle::getName))//
                 .collect(Collectors.toList());
         bundles.addAll(fileBundles);
-
         bundleBox.setItems(bundles);
         bundleService.addBundles(fileBundles);
         return fileBundles;
