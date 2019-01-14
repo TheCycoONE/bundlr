@@ -25,6 +25,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -313,31 +314,38 @@ public class ParserController {
                 try {
                     WatchService watchService = FileSystems.getDefault().newWatchService();
                     Path filePath = file.toPath();
-                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY,StandardWatchEventKinds.ENTRY_DELETE);
                     WatchKey key;
                     while ((key = watchService.take()) != null) {
                         for (WatchEvent<?> event : key.pollEvents()) {
-                            Path path=filePath.resolve(event.context().toString());
-                            File potentialFile=path.toFile();
-                            String pathString=path.toString();
-                            boolean isFullDirectory=potentialFile.isDirectory() && Files.list(path).findAny().isPresent();
-                            boolean isExistingBundle=bundles.stream().anyMatch(bundle -> bundle.getPath().equals(pathString));
-                            if(!isExistingBundle&&isFullDirectory){
-                                File directory=path.toFile();
-                                Platform.runLater(() -> {
-                                    try {
-                                        processDirectory(directory,false);
-                                        FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
-                                        changeBundle(currentBundle);
-                                    } catch (IOException | ConfigurationException | ExecutionException e) {
-                                        e.printStackTrace();
-                                    } catch (InterruptedException ignored) {
+                            if(!internalChange) {
+                                Path path = filePath.resolve(event.context().toString());
+                                File potentialFile = path.toFile();
+                                if (potentialFile.exists()) {
+                                    String pathString = path.toString();
+                                    boolean isFullDirectory = potentialFile.isDirectory() && Files.list(path).findAny().isPresent();
+                                    boolean isExistingBundle = bundles.stream().anyMatch(bundle -> bundle.getPath().equals(pathString));
+                                    if (!isExistingBundle && isFullDirectory) {
+                                        File directory = path.toFile();
+                                        Platform.runLater(() -> {
+                                            try {
+                                                processDirectory(directory, false);
+                                                FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+                                                changeBundle(currentBundle);
+                                            } catch (IOException | ConfigurationException | ExecutionException e) {
+                                                e.printStackTrace();
+                                            } catch (InterruptedException ignored) {
 
+                                            }
+                                        });
                                     }
-                                });
+                                }
                             }
                         }
                         key.reset();
+                        Platform.runLater(() ->{
+                            releaseFileWatcher();
+                        });
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -1108,6 +1116,8 @@ public class ParserController {
                 }
                 if (bundles != null) {
                     bundles.remove(bundle);
+                    lockFileWatcher();
+                    FileUtils.deleteDirectory(new File(bundle.getPath()));
                     loadBundleWatchers();
                     loadFolderWatchers();
                     bundleBox.setItems(bundles);
