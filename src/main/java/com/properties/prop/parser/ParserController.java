@@ -514,9 +514,11 @@ public class ParserController {
                             }
                         }
                         key.reset();
-                        Platform.runLater(() -> {
-                            releaseFileWatcher();
-                        });
+                        if(internalChange) {
+                            Platform.runLater(() -> {
+                                releaseFileWatcher();
+                            });
+                        }
                     }
                 } catch (IOException | ExecutionException | ConfigurationException e) {
                     e.printStackTrace();
