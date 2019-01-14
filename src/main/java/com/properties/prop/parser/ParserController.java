@@ -145,8 +145,9 @@ public class ParserController {
             }
         };
         bundleBox.getSelectionModel().selectedItemProperty().addListener(bundleChangeListener);
-        searchOptionsBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+        searchOptionsBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<String>) (observable, oldValue, newValue) -> {
             if(newValue!=null){
+                searchOption=newValue;
                 if(searchResourcesMap!=null&&!searchResourcesMap.isEmpty()){
                     ObservableList<Resource> resources=searchResourcesMap.get(newValue);
                     if(resources!=null&&!resources.isEmpty()){
@@ -155,6 +156,7 @@ public class ParserController {
                 }
             }
         });
+
         if(bundles!=null&&!bundles.isEmpty()) {
             currentBundle = bundles.get(0);
             bundleDirectories = bundles.stream().map(bundle -> Path.of(bundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
@@ -716,6 +718,7 @@ public class ParserController {
         sortFields(columnNames);
         List<String> searchOptions=new ArrayList<>();
         searchOptions.add("code");
+        searchOption="code";
         searchOptions.addAll(columnNames);
         searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
         searchOptionsBox.getSelectionModel().select(0);
