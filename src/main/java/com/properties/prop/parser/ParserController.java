@@ -112,8 +112,11 @@ public class ParserController {
                         super.updateItem(item, empty);
                         if (item == null || empty) {
                             setGraphic(null);
+                            setTooltip(null);
                         } else {
+                            Tooltip tooltip=new Tooltip(item.getPath());
                             setText(item.getName());
+                            setTooltip(tooltip);
                         }
                     }
                 };
