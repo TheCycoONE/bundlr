@@ -57,7 +57,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
         }
     }
     @Override
-    public void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
+    public synchronized void reloadDocuments(String storeName, List<Resource> resources) throws IOException {
         if(stores.containsKey(storeName)){
             List<Document> documents=resourceDocumentConverter.convertAllToDocument(resources);
             DocumentStore documentStore=stores.get(storeName);

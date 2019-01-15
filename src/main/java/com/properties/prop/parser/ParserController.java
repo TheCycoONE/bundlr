@@ -334,7 +334,10 @@ public class ParserController {
                                         File directory = path.toFile();
                                         Platform.runLater(() -> {
                                             try {
-                                                processDirectory(directory, false);
+                                                if(processDirectory(directory, false)) {
+                                                    loadBundleWatchers();
+                                                    loadFolderWatchers();
+                                                }
                                                 FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
                                                 changeBundle(currentBundle);
                                             } catch (IOException | ConfigurationException | ExecutionException e) {
@@ -383,7 +386,7 @@ public class ParserController {
         }
         List<CompletableFuture<Void>> bundleFutures=new ArrayList<>();
         for(Bundle bundle : bundles){
-            CompletableFuture<Void> bundleFuture=CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<Void> bundleFuture=CompletableFuture.supplyAsync(() ->{
                 try {
                     FileTime bundleModifiedTime=Files.getLastModifiedTime(Path.of(bundle.getPath()));
                     Map<String, String> fileMap = bundle.getFileMap();
@@ -418,16 +421,13 @@ public class ParserController {
                                 long bundleModifiedLong=bundleModifiedTime.toMillis();
                                 bundle.setLastModified(bundleModifiedLong);
                                 bundleService.updateBundle(bundle);
-                                Path folderPath=Path.of(bundle.getPath());
-                                lockFileWatcher();
-                                Files.setLastModifiedTime(folderPath,bundleModifiedTime);
-                                lockFileWatcher();
+                                Path folderPath = Path.of(bundle.getPath());
+                                Files.setLastModifiedTime(folderPath, bundleModifiedTime);
                                 Collection<String> filePathStrings = fileMap.values();
                                 for (String filePathString : filePathStrings) {
                                     Path path = Path.of(filePathString);
-                                    Files.setLastModifiedTime(path,bundleModifiedTime);
+                                    Files.setLastModifiedTime(path, bundleModifiedTime);
                                 }
-
                             }
                         }
                     }
@@ -440,7 +440,6 @@ public class ParserController {
         }
         CompletableFuture<Void> mainBundleFuture=CompletableFuture.allOf(bundleFutures.toArray(CompletableFuture[]::new));
         mainBundleFuture.get();
-        System.out.println();
     }
     private void loadBundleWatchers() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         if (bundleWatchersExecutor != null) {
@@ -518,7 +517,10 @@ public class ParserController {
                                             }
                                         }
                                     } else if (!isPropertiesFile) {
-                                        processDirectory(potentialFile, false);
+                                        if(processDirectory(potentialFile, false)){
+                                            loadBundleWatchers();
+                                            loadFolderWatchers();
+                                        }
                                         Platform.runLater(() -> {
                                             setBundle(currentBundle);
                                         });
@@ -805,7 +807,7 @@ public class ParserController {
         internalChange = false;
     }
 
-    private void updateLastModifiedTime(String pathString) throws IOException {
+    private synchronized void updateLastModifiedTime(String pathString) throws IOException {
             long lastModified = Instant.now().toEpochMilli();
             List<Bundle> affectedBundles=bundles.stream().filter(bundle -> bundle.getPath().equals(pathString)).collect(Collectors.toList());
             for(Bundle bundle : affectedBundles) {
@@ -858,13 +860,16 @@ public class ParserController {
         final DirectoryChooser directoryChooser=new DirectoryChooser();
         Stage stage= (Stage) anchorId.getScene().getWindow();
         File file=directoryChooser.showDialog(stage);
-        processDirectory(file,true);
+        if(processDirectory(file,true)) {
+            loadBundleWatchers();
+            loadFolderWatchers();
+        }
         FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
     }
 
-    private void processDirectory(File file,boolean fromOpenDirectory) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+    private boolean processDirectory(File file,boolean fromOpenDirectory) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+        boolean foundBundles=false;
         if(file!=null) {
-            boolean foundBundles=false;
             if (containsBundles(file)) {
                 processSingleBundleDirectory(file,fromOpenDirectory);
                 foundBundles=true;
@@ -907,11 +912,8 @@ public class ParserController {
                     }
                 }
             }
-            if(foundBundles) {
-                loadBundleWatchers();
-                loadFolderWatchers();
-            }
         }
+        return foundBundles;
     }
 
     private boolean containsBundles(File file) throws IOException {
