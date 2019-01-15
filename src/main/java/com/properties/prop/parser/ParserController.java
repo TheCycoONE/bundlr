@@ -478,11 +478,15 @@ public class ParserController {
                                                     fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
                                                 }
                                                 bundle.setFileMap(fileMap);
+                                                Platform.runLater(() ->{
+                                                    parserTable.setEditable(false);
+                                                });
                                                 updateBundleIndex(bundle, files, fileMap);
                                                 if (currentBundle == bundle) {
                                                     Platform.runLater(() -> {
                                                         try {
                                                             changeBundle(currentBundle);
+                                                            parserTable.setEditable(true);
                                                         } catch (IOException | ExecutionException | ConfigurationException e) {
                                                             e.printStackTrace();
                                                         } catch (InterruptedException ignored) {
