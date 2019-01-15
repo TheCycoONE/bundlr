@@ -162,18 +162,6 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
         final TextField textField = new TextField(getItemText());
 
-        textField.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-
-            public void handle(ActionEvent event) {
-
-                System.out.println("hi");
-
-            }
-
-        });
-
         // Use onAction here rather than onKeyReleased (with check for Enter),
 
         textField.setOnAction(event -> {
@@ -299,6 +287,7 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
                 if (textField != null) {
 
                     textField.setText(getItemText());
+                    textField.positionCaret(getItemText().length());
 
                 }
 
