@@ -178,10 +178,10 @@ public class ParserController {
             CompletableFuture<Void> completableFuture = CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
             completableFuture.exceptionally((ex) -> null);
             completableFuture.get();
+            updateIndexes();
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
             setBundle(bundles.get(0));
-            updateIndexes();
             loadBundleWatchers();
             loadFolderWatchers();
         }
