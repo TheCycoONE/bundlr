@@ -160,9 +160,7 @@ public class ParserController {
         if(bundles!=null&&!bundles.isEmpty()) {
             currentBundle = bundles.get(0);
             bundleDirectories = bundles.stream().map(bundle -> Path.of(bundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
-            List<CompletableFuture> completableFutures = new ArrayList<>();
             for (File file : bundleDirectories) {
-                CompletableFuture<Void> asyncCompletableFuture = CompletableFuture.supplyAsync(() -> {
                     try {
                         processDirectory(file,false);
                     } catch (IOException | ConfigurationException | ExecutionException e) {
@@ -170,13 +168,7 @@ public class ParserController {
                     } catch (InterruptedException ignored) {
 
                     }
-                   return null;
-               });
-               completableFutures.add(asyncCompletableFuture);
             }
-            CompletableFuture<Void> completableFuture = CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-            completableFuture.exceptionally((ex) -> null);
-            completableFuture.get();
             updateIndexes();
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
