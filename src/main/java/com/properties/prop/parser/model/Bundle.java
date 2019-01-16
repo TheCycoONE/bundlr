@@ -2,6 +2,7 @@ package com.properties.prop.parser.model;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class Bundle {
@@ -54,5 +55,22 @@ public class Bundle {
 
     public void setLastModified(long lastModified) {
         this.lastModified = lastModified;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Bundle bundle = (Bundle) o;
+        return getLastModified() == bundle.getLastModified() &&
+                Objects.equals(getName(), bundle.getName()) &&
+                Objects.equals(getPath(), bundle.getPath()) &&
+                Objects.equals(getId(), bundle.getId()) &&
+                Objects.equals(getFileMap(), bundle.getFileMap());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getName(), getPath(), getId(), getLastModified(), getFileMap());
     }
 }
