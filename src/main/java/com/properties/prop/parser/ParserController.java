@@ -1075,7 +1075,7 @@ public class ParserController {
 
     private void selectOption(String queryString, String searchOption) {
         searchOptionsBox.getSelectionModel().select(searchOption);
-        if (!queryString.matches("( +)") && !queryString.equals("")) {
+        if (!queryString.matches("( +)") && !queryString.equals("")&&searchOptionsBox.getItems().size()>1) {
             searchOptionsBox.show();
         }
         parserTable.getItems().add(new Resource(""));
