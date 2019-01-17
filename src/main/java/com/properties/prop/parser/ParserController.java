@@ -1014,6 +1014,7 @@ public class ParserController {
         if(currentBundle!=null) {
             searchBar.clear();
             if (resourceIndexService.storeExists(currentBundle.getName())) {
+                matchFound=true;
                 ObservableList<Resource> searchedResources = resourceIndexService.getAllResources(currentBundle.getName());
                 parserTable.setItems(searchedResources);
             }
@@ -1037,12 +1038,12 @@ public class ParserController {
                         setSelectedOption(searchString);
                     }
                 }else{
+                    matchFound=true;
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
                     resources=resourceIndexService.getAllResources(currentBundle.getName());
                     parserTable.setItems(resources);
                     parserTable.getItems().add(new Resource(""));
                     reloadAllColumns();
-                    matchFound=true;
                 }
             }
             if(!matchFound){
