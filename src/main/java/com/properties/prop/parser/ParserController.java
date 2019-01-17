@@ -282,6 +282,7 @@ public class ParserController {
 
     private void changeBundle(Bundle bundle) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
             currentBundle = bundle;
+            searchResourcesMap=Collections.emptyMap();
             if (bundle.getFileMap().isEmpty()) {
                 updateStoreUI(bundle);
             } else {
@@ -296,6 +297,7 @@ public class ParserController {
     private void softChangeBundle(Bundle bundle) throws IOException, ConfigurationException {
         currentBundle=bundle;
         changeColumnNames(bundle.getFileMap());
+        searchOption = searchResourcesMap.entrySet().stream().filter(entry -> !entry.getValue().isEmpty()).map(entry -> entry.getKey()).findFirst().orElse("");
         specialLoadData(bundle.getName());
         bundleBox.getSelectionModel().selectedItemProperty().removeListener(bundleChangeListener);
         bundleBox.getSelectionModel().select(bundle);
@@ -711,12 +713,14 @@ public class ParserController {
         parserTable.getSelectionModel().setCellSelectionEnabled(true);
         List<String> columnNames= new ArrayList<>(fileMap.keySet());
         sortFields(columnNames);
-        List<String> searchOptions=new ArrayList<>();
-        searchOptions.add("code");
-        searchOption="code";
-        searchOptions.addAll(columnNames);
-        searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
-        searchOptionsBox.getSelectionModel().select(0);
+        if(searchResourcesMap.isEmpty()) {
+            List<String> searchOptions = new ArrayList<>();
+            searchOptions.add("code");
+            searchOption = "code";
+            searchOptions.addAll(columnNames);
+            searchOptionsBox.setItems(FXCollections.observableArrayList(searchOptions));
+            searchOptionsBox.getSelectionModel().select(0);
+        }
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
