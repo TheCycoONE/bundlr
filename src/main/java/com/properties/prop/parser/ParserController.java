@@ -79,6 +79,7 @@ public class ParserController {
     private TreeSet<Bundle> sortedBundles;
     private String searchOption;
     private ChangeListener<Bundle> bundleChangeListener;
+    private ObservableList<Resource> unsortedResources;
     private volatile boolean internalChange = false;
 
     @Autowired
@@ -160,9 +161,7 @@ public class ParserController {
         if(bundles!=null&&!bundles.isEmpty()) {
             currentBundle = bundles.get(0);
             bundleDirectories = bundles.stream().map(bundle -> Path.of(bundle.getPath()).getParent().toFile()).distinct().collect(Collectors.toList());
-            List<CompletableFuture> completableFutures = new ArrayList<>();
             for (File file : bundleDirectories) {
-                CompletableFuture<Void> asyncCompletableFuture = CompletableFuture.supplyAsync(() -> {
                     try {
                         processDirectory(file,false);
                     } catch (IOException | ConfigurationException | ExecutionException e) {
@@ -170,13 +169,7 @@ public class ParserController {
                     } catch (InterruptedException ignored) {
 
                     }
-                   return null;
-               });
-               completableFutures.add(asyncCompletableFuture);
             }
-            CompletableFuture<Void> completableFuture = CompletableFuture.allOf(completableFutures.toArray(CompletableFuture[]::new));
-            completableFuture.exceptionally((ex) -> null);
-            completableFuture.get();
             updateIndexes();
             FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
             bundleBox.setItems(bundles);
@@ -795,11 +788,23 @@ public class ParserController {
         }
         parserTable.getColumns().add(codeColumn);
         parserTable.getColumns().addAll(tableColumns);
+
         int numberOfCols=parserTable.getColumns().size();
         List<TableColumn> columns=(List<TableColumn>)parserTable.getColumns();
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
+        parserTable.comparatorProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                if(newValue!=null&&oldValue==null){
+                    ObservableList<Resource> specialResources=FXCollections.observableArrayList((ObservableList<Resource>)parserTable.getItems());
+                    unsortedResources=specialResources;
+                }else if(newValue==null&&oldValue!=null){
+                    parserTable.setItems(unsortedResources);
+                }
+            }
+        });
     }
 
     private void releaseFileWatcher() {
