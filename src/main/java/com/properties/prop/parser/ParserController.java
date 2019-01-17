@@ -79,7 +79,6 @@ public class ParserController {
     private TreeSet<Bundle> sortedBundles;
     private String searchOption;
     private ChangeListener<Bundle> bundleChangeListener;
-    private ObservableList<Resource> unsortedResources;
     private volatile boolean internalChange = false;
 
     @Autowired
@@ -794,17 +793,6 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
-        parserTable.comparatorProperty().addListener(new ChangeListener() {
-            @Override
-            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                if(newValue!=null&&oldValue==null){
-                    ObservableList<Resource> specialResources=FXCollections.observableArrayList((ObservableList<Resource>)parserTable.getItems());
-                    unsortedResources=specialResources;
-                }else if(newValue==null&&oldValue!=null){
-                    parserTable.setItems(unsortedResources);
-                }
-            }
-        });
     }
 
     private void releaseFileWatcher() {
