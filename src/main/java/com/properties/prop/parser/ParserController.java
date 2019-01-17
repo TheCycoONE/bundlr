@@ -809,6 +809,7 @@ public class ParserController {
                     matchFound=false;
                 }else if(newValue!=null&&oldValue==null){
                     unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
+                    matchFound=false;
                 }
             }
         });
