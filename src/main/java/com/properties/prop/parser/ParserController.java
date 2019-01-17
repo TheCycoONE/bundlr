@@ -80,6 +80,8 @@ public class ParserController {
     private String searchOption;
     private ChangeListener<Bundle> bundleChangeListener;
     private volatile boolean internalChange = false;
+    private boolean matchFound;
+    private ObservableList<Resource> unsortedResources;
 
     @Autowired
     private FileService fileService;
@@ -793,6 +795,19 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
+        parserTable.comparatorProperty().addListener(new ChangeListener() {
+            @Override
+            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
+                if(newValue==null&&!matchFound) {
+                    parserTable.setItems(unsortedResources);
+                }else if(newValue==null&&matchFound){
+                    unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
+                    matchFound=false;
+                }else if(newValue!=null&&oldValue==null){
+                    unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
+                }
+            }
+        });
     }
 
     private void releaseFileWatcher() {
@@ -1008,7 +1023,7 @@ public class ParserController {
             String[] fieldsArray = getFieldsArray();
             searchOption = searchOptionsBox.getSelectionModel().getSelectedItem().toString();
             ObservableList<Resource> searchedResources;
-            boolean matchFound=false;
+            matchFound=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
                 if(!searchString.matches("( +)")&&!searchString.equals("")) {
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
