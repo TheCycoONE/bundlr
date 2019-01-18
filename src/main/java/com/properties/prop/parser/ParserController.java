@@ -1030,15 +1030,18 @@ public class ParserController {
             searchOption = searchOptionsBox.getSelectionModel().getSelectedItem().toString();
             ObservableList<Resource> searchedResources;
             matchFound=false;
+            boolean foundResources=false;
             if (resourceIndexService.storeExists(currentBundle.getName())) {
                 if(!searchString.matches("( +)")&&!searchString.equals("")) {
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
-                    matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
-                    if (matchFound) {
+                    foundResources = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
+                    if (foundResources) {
+                        matchFound=true;
                         setSelectedOption(searchString);
                     }
                 }else{
                     matchFound=true;
+                    foundResources=true;
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
                     resources=resourceIndexService.getAllResources(currentBundle.getName());
                     parserTable.setItems(resources);
@@ -1046,14 +1049,15 @@ public class ParserController {
                     reloadAllColumns();
                 }
             }
-            if(!matchFound){
+            if(!foundResources){
                 List<Bundle> otherBundles=bundles.stream().filter(Predicate.not(bundle -> bundle.getName().equals(currentBundle.getName()))).collect(Collectors.toList());
                 for(Bundle bundle : otherBundles) {
                         String[] bundleFieldsArray=getFields(bundle);
                         if (resourceIndexService.storeExists(bundle.getName())) {
                             loadResourcesMap(searchString,bundleFieldsArray,bundle);
-                            matchFound = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
-                            if(matchFound){
+                            foundResources = searchResourcesMap.values().stream().anyMatch(Predicate.not(list -> list.isEmpty()));
+                            if(foundResources){
+                                matchFound=true;
                                 softChangeBundle(bundle);
                                 setSelectedOption(searchString);
                                 break;
