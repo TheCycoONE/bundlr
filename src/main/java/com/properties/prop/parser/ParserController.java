@@ -292,7 +292,7 @@ public class ParserController {
             bundleBox.getSelectionModel().select(bundle);
     }
     private void setBundle(Bundle bundle){
-        bundleBox.getSelectionModel().select(bundles.indexOf(bundle));
+        bundleBox.getSelectionModel().select(bundle);
     }
     private void softChangeBundle(Bundle bundle) throws IOException, ConfigurationException {
         currentBundle=bundle;
@@ -314,15 +314,17 @@ public class ParserController {
                 try {
                     WatchService watchService = FileSystems.getDefault().newWatchService();
                     Path filePath = file.toPath();
-                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY,StandardWatchEventKinds.ENTRY_DELETE);
+                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY,StandardWatchEventKinds.ENTRY_DELETE,StandardWatchEventKinds.ENTRY_CREATE);
                     WatchKey key;
                     while ((key = watchService.take()) != null) {
                         for (WatchEvent<?> event : key.pollEvents()) {
                             if (!internalChange) {
                                 Path path = filePath.resolve(event.context().toString());
                                 File potentialFile = path.toFile();
+                                String pathString = path.toString();
                                 if (potentialFile.exists()) {
-                                    String pathString = path.toString();
+                                    String extension = FilenameUtils.getExtension(pathString);
+                                    boolean isPropertiesFile = extension.equals("properties");
                                     boolean isFullDirectory = potentialFile.isDirectory() && Files.list(path).findAny().isPresent();
                                     boolean isExistingBundle = bundles.stream().anyMatch(bundle -> bundle.getPath().equals(pathString));
                                     if (!isExistingBundle && isFullDirectory) {
@@ -341,6 +343,30 @@ public class ParserController {
 
                                             }
                                         });
+                                    }else if(isPropertiesFile){
+                                        String fileName = FilenameUtils.getBaseName(pathString);
+                                        Bundle bundle = bundles.stream().filter(currentBundle -> fileName.startsWith(currentBundle.getName())).findFirst().orElse(null);
+                                        if (bundle != null) {
+                                            File bundleFile = new File(bundle.getPath());
+                                            if (bundleFile.exists()) {
+                                                handleBundle(bundle, bundleFile);
+                                            } else {
+                                                removeBundle(bundle);
+                                            }
+                                        }else {
+                                            handleSinglePropertiesFile(potentialFile);
+                                        }
+                                    }
+                                }else{
+                                    String fileName = FilenameUtils.getBaseName(pathString);
+                                    Bundle bundle = bundles.stream().filter(currentBundle -> fileName.startsWith(currentBundle.getName())).findFirst().orElse(null);
+                                    if (bundle != null) {
+                                        File bundleFile = new File(bundle.getPath());
+                                        if (bundleFile.exists()) {
+                                            handleBundle(bundle, bundleFile);
+                                        } else {
+                                            removeBundle(bundle);
+                                        }
                                     }
                                 }
                             }
@@ -360,7 +386,18 @@ public class ParserController {
         }
     }
 
-    private synchronized void handleBundle(Bundle bundle, File file) {
+    private void handleSinglePropertiesFile(File potentialFile) {
+        Platform.runLater(() -> {
+            try {
+                processSingleFileBundle(potentialFile);
+            } catch (IOException | ExecutionException | ConfigurationException e) {
+                e.printStackTrace();
+            } catch (InterruptedException ignored) {
+            }
+        });
+    }
+
+    private synchronized void handleBundle(Bundle bundle, File file) throws IOException {
         File[] fileArray = file.listFiles();
         if (fileArray != null) {
             List<File> files = Arrays.stream(fileArray) //
@@ -374,8 +411,9 @@ public class ParserController {
             Platform.runLater(() -> {
                 parserTable.setEditable(false);
             });
-            updateBundleIndex(bundle, files, fileMap);
-            if (currentBundle.getName().equals(bundle.getName())) {
+            if(!fileMap.isEmpty()) {
+                updateBundleIndex(bundle, files, fileMap);
+                if (currentBundle.getName().equals(bundle.getName())) {
                     Platform.runLater(() -> {
                         try {
                             changeBundle(bundle);
@@ -387,6 +425,9 @@ public class ParserController {
 
                         }
                     });
+                }
+            }else{
+                removeBundle(bundle);
             }
         }
     }
@@ -468,7 +509,7 @@ public class ParserController {
         CompletableFuture<Void> mainBundleFuture=CompletableFuture.allOf(bundleFutures.toArray(CompletableFuture[]::new));
         mainBundleFuture.get();
     }
-    private void loadBundleWatchers() throws IOException, ConfigurationException, ExecutionException, InterruptedException {
+    private void loadBundleWatchers() {
         if (bundleWatchersExecutor != null) {
             bundleWatchersExecutor.shutdownNow();
         }
@@ -478,7 +519,7 @@ public class ParserController {
             Runnable runnable = () -> {
                 try {
                     WatchService watchService = FileSystems.getDefault().newWatchService();
-                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+                    filePath.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
                     WatchKey key;
                     while ((key = watchService.take()) != null) {
                             for (WatchEvent<?> event : key.pollEvents()) {
@@ -495,31 +536,24 @@ public class ParserController {
                                         if (file.exists()) {
                                             handleBundle(bundle, file);
                                         } else {
-                                            bundleService.deleteBundle(bundle);
-                                            resourceIndexService.deleteStore(bundle.getName());
-                                            Platform.runLater(() -> bundles.remove(bundle));
-                                            if (currentBundle.getName().equals(bundle.getName())) {
-                                                Platform.runLater(() -> {
-                                                    if (bundles != null && !bundles.isEmpty()) {
-                                                        try {
-                                                            changeBundle(bundles.get(0));
-                                                        } catch (IOException | ExecutionException | ConfigurationException e) {
-                                                            e.printStackTrace();
-                                                        } catch (InterruptedException e) {
-
-                                                        }
-                                                    }
-                                                });
-                                            }
+                                            removeBundle(bundle);
                                         }
                                     } else if (!isPropertiesFile) {
-                                        if(processDirectory(potentialFile, false)){
-                                            loadBundleWatchers();
-                                            loadFolderWatchers();
-                                        }
                                         Platform.runLater(() -> {
+                                            try {
+                                                if(processDirectory(potentialFile, false)){
+                                                    loadBundleWatchers();
+                                                    loadFolderWatchers();
+                                                }
+                                            } catch (IOException | ConfigurationException | ExecutionException e) {
+                                                e.printStackTrace();
+                                            } catch (InterruptedException ignored) {
+
+                                            }
                                             setBundle(currentBundle);
                                         });
+                                    } else if(isPropertiesFile){
+                                        handleSinglePropertiesFile(potentialFile);
                                     }
                                 }
                             }
@@ -530,13 +564,32 @@ public class ParserController {
                             });
                         }
                     }
-                } catch (IOException | ExecutionException | ConfigurationException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                 } catch (InterruptedException ignored) {
 
                 }
             };
             bundleWatchersExecutor.execute(runnable);
+        }
+    }
+
+    private void removeBundle(Bundle bundle) throws IOException {
+        bundleService.deleteBundle(bundle);
+        resourceIndexService.deleteStore(bundle.getName());
+        Platform.runLater(() -> bundles.remove(bundle));
+        if (currentBundle.getName().equals(bundle.getName())) {
+            Platform.runLater(() -> {
+                if (bundles != null && !bundles.isEmpty()) {
+                    try {
+                        changeBundle(bundles.get(0));
+                    } catch (IOException | ExecutionException | ConfigurationException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+
+                    }
+                }
+            });
         }
     }
 
@@ -956,6 +1009,21 @@ public class ParserController {
         bundleService.addBundles(fileBundles);
         return fileBundles;
     }
+    private Bundle getBundle(File file) throws IOException {
+        if(FilenameUtils.getBaseName(file.getPath()).matches(".*_[a-z]{2}_[A-Z]{2}")){
+            Path filePath=file.toPath();
+            Path directoryPath=filePath.getParent();
+            File directoryFile=directoryPath.toFile();
+            FileTime lastModifiedFileTime=Files.getLastModifiedTime(directoryPath);
+            long lastModified=lastModifiedFileTime.toMillis();
+            Bundle bundle=new Bundle(getBundleName(file),directoryFile.getPath(),lastModified);
+            bundles.add(bundle);
+            bundleBox.setItems(bundles);
+            bundleService.addBundle(bundle);
+            return bundle;
+        }
+        return null;
+    }
 
     public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
         Set<Object> seen = ConcurrentHashMap.newKeySet();
@@ -978,6 +1046,16 @@ public class ParserController {
                     processBundleWithoutUI(bundle);
                 }
                 sortedBundles.addAll(fileBundles);
+            }
+        }
+    }
+    private void processSingleFileBundle(File file) throws IOException, InterruptedException, ExecutionException, ConfigurationException {
+        Bundle bundle=getBundle(file);
+        if(bundle!=null){
+            processBundleWithoutUI(bundle);
+            if (bundles != null && !bundles.isEmpty()) {
+                FXCollections.sort(bundles, Comparator.comparing(Bundle::getName));
+                    setBundle(bundle);
             }
         }
     }
