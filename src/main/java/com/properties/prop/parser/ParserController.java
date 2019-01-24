@@ -195,10 +195,10 @@ public class ParserController {
             if(event.getCode() == KeyCode.ENTER){
                 try {
                     deleteBundle();
-                } catch (IOException | ExecutionException | InterruptedException e) {
+                } catch (IOException | ExecutionException | ConfigurationException e) {
                     e.printStackTrace();
-                } catch (ConfigurationException e) {
-                    e.printStackTrace();
+                }catch (InterruptedException ignored){
+
                 }
             }
         });
@@ -254,11 +254,7 @@ public class ParserController {
         if (event.getCode() == KeyCode.ENTER) {
             try {
                 searchFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-                e.printStackTrace();
-            } catch (ConfigurationException e) {
+            } catch (IOException | ConfigurationException | ParseException e) {
                 e.printStackTrace();
             }
         }
@@ -272,9 +268,7 @@ public class ParserController {
                 }else {
                     filterBundles();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
+            } catch (IOException | ParseException e) {
                 e.printStackTrace();
             }
         }
@@ -852,18 +846,15 @@ public class ParserController {
         for(TableColumn column : columns){
             column.prefWidthProperty().bind(parserTable.widthProperty().divide(numberOfCols));
         }
-        parserTable.comparatorProperty().addListener(new ChangeListener() {
-            @Override
-            public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                if(newValue==null&&!matchFound) {
-                    parserTable.setItems(unsortedResources);
-                }else if(newValue==null&&matchFound){
-                    unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
-                    matchFound=false;
-                }else if(newValue!=null&&oldValue==null){
-                    unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
-                    matchFound=false;
-                }
+        parserTable.comparatorProperty().addListener((observable, oldValue, newValue) -> {
+            if(newValue==null&&!matchFound) {
+                parserTable.setItems(unsortedResources);
+            }else if(newValue==null&&matchFound){
+                unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
+                matchFound=false;
+            }else if(newValue!=null&&oldValue==null){
+                unsortedResources=FXCollections.observableArrayList(parserTable.getItems());
+                matchFound=false;
             }
         });
     }
