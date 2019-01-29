@@ -33,29 +33,27 @@ public class DocumentStore {
     public void setAnalyzer(Analyzer analyzer){
         this.analyzer=analyzer;
     }
-    public synchronized void clearAll() throws IOException {
+    public synchronized void clearAllFiles() throws IOException {
         if(analyzer!=null) {
-            if (DirectoryReader.indexExists(index)) {
-                IndexWriterConfig config = new IndexWriterConfig(analyzer);
-                IndexWriter writer = new IndexWriter(index, config);
-                writer.deleteAll();
-                writer.commit();
-                writer.close();
+            File file=new File(indexLocation);
+            if(file.exists()) {
+                FileUtils.deleteDirectory(file);
             }
-            String[] leftOverFiles = index.listAll();
-            if (leftOverFiles.length != 0) {
-                for (String file : leftOverFiles) {
-                    index.deleteFile(file);
-                }
-            }
-            FileUtils.deleteDirectory(new File(indexLocation));
         }
     }
     public synchronized void reloadDocuments(List<Document> documents) throws IOException {
         if(analyzer!=null) {
-            clearAll();
+            clearDocuments();
             addDocuments(documents);
         }
+    }
+    private synchronized void clearDocuments() throws IOException {
+        IndexWriterConfig config = new IndexWriterConfig(analyzer);
+        IndexWriter writer = new IndexWriter(index, config);
+        writer.deleteAll();
+        writer.forceMergeDeletes();
+        writer.commit();
+        writer.close();
     }
     public synchronized void addDocuments(List<Document> documents)throws IOException {
         if(analyzer!=null) {

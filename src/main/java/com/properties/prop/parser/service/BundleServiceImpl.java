@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class BundleServiceImpl implements BundleService, InitializingBean {
@@ -52,7 +53,7 @@ public class BundleServiceImpl implements BundleService, InitializingBean {
 
     public ObservableList<Bundle> loadBundles() throws IOException {
         List<Document> documents=bundleStore.getAllDocuments();
-        return FXCollections.observableArrayList(bundleDocumentConverter.convertAllToBundle(documents));
+        return FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new CopyOnWriteArrayList(bundleDocumentConverter.convertAllToBundle(documents))));
     }
     public ObservableList<Bundle> searchBundles(String queryString) throws ParseException, IOException {
         List<Document> documents = bundleStore.searchIndex(queryString,"name");

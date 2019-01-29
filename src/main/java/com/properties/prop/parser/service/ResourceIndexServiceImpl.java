@@ -97,7 +97,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
     @Override
     public synchronized void deleteStore(String storeName) throws IOException {
         if(stores.containsKey(storeName)){
-            stores.get(storeName).clearAll();
+            stores.get(storeName).clearAllFiles();
             stores.remove(storeName);
         }
     }
