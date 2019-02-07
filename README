@@ -1,3 +1,4 @@
 Introducing BundleBee the minimalist resource bundle editor with full text search.
 In order to use just download the bundleBee.jar.
 Once running it will create an indexes folder where it stores all lucene indexes for different files you are going to upload.
+Special thanks to Alex Hadar for testing and Adrian Vultur for coming up with the name BundleBee
