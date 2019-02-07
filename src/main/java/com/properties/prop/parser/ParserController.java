@@ -72,7 +72,7 @@ public class ParserController {
     private ExecutorService bundleWatchersExecutor;
     private ExecutorService folderWatcherExecutor;
     private Bundle currentBundle;
-    private ObservableList<Bundle> bundles=FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new CopyOnWriteArrayList<>()));
+    private ObservableList<Bundle> bundles=FXCollections.observableArrayList(new CopyOnWriteArrayList<>());
     private TableView parserTable;
     private Map<String,ObservableList<Resource>> searchResourcesMap;
     private List<File> bundleDirectories;
