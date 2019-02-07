@@ -313,7 +313,6 @@ public class ParserController {
                     while ((key = watchService.take()) != null) {
                         for (WatchEvent<?> event : key.pollEvents()) {
                             if (!internalChange) {
-                                synchronized (this) {
                                     Path path = filePath.resolve(event.context().toString());
                                     File potentialFile = path.toFile();
                                     String pathString = path.toString();
@@ -344,8 +343,9 @@ public class ParserController {
                                             if (bundle != null) {
                                                 File bundleFile = new File(bundle.getPath());
                                                 if (bundleFile.exists()) {
-                                                    handleBundle(bundle, bundleFile);
+                                                    handleBundle(bundle);
                                                 } else {
+                                                    updateBundleResources(bundle);
                                                     removeBundle(bundle);
                                                 }
                                             } else {
@@ -361,7 +361,6 @@ public class ParserController {
                                         workWithBundle(potentialFile, bundle);
                                     }
                                 }
-                            }
                         }
                         key.reset();
                         Platform.runLater(() ->{
@@ -383,12 +382,13 @@ public class ParserController {
         if (directoryFile.exists()) {
             if(bundle!=null){
                 File bundleFile = new File(bundle.getPath());
-                handleBundle(bundle,bundleFile);
+                handleBundle(bundle);
             }else {
                 handleSinglePropertiesFile(potentialFile);
             }
         }else {
             if (bundle != null) {
+                updateBundleResources(bundle);
                 removeBundle(bundle);
             }
         }
@@ -405,7 +405,8 @@ public class ParserController {
         });
     }
 
-    private synchronized void handleBundle(Bundle bundle, File file) throws IOException {
+    private synchronized void handleBundle(Bundle bundle) throws IOException {
+        File file = new File(bundle.getPath());
         File[] fileArray = file.listFiles();
         if (fileArray != null) {
             List<File> files = Arrays.stream(fileArray) //
@@ -432,9 +433,7 @@ public class ParserController {
                         try {
                                 changeBundle(bundle);
                                 parserTable.setEditable(true);
-                                synchronized (this) {
-                                    updateLastModifiedTime(bundle.getPath());
-                                }
+                                updateLastModifiedTime(bundle.getPath());
                         } catch (IOException | ExecutionException | ConfigurationException e) {
                             e.printStackTrace();
                         } catch (InterruptedException ignored) {
@@ -443,7 +442,34 @@ public class ParserController {
                     });
                 }
             }else{
+                updateBundleResources(bundle);
                 removeBundle(bundle);
+            }
+        }
+    }
+    private void updateBundleResources(Bundle bundle) {
+        File file = new File(bundle.getPath());
+        File[] fileArray = file.listFiles();
+        if (fileArray != null) {
+            List<File> files = Arrays.stream(fileArray) //
+                    .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
+                    .collect(Collectors.toList());
+            Map<String, String> fileMap = new LinkedHashMap<>();
+            for (File currentFile : files) {
+                fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
+            }
+            bundle.setFileMap(fileMap);
+            Platform.runLater(() -> {
+                parserTable.setEditable(false);
+            });
+            if (!fileMap.isEmpty()) {
+                Platform.runLater(() -> {
+                    try {
+                        updateBundleIndex(bundle, files, fileMap);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
             }
         }
     }
@@ -598,7 +624,8 @@ public class ParserController {
             Platform.runLater(() -> {
                     if (bundles != null && !bundles.isEmpty()) {
                         try {
-                            changeBundle(bundles.get(0));
+                            Bundle changedBundle=bundles.get(0);
+                            changeBundle(changedBundle);
                         } catch (IOException | ExecutionException | ConfigurationException e) {
                             e.printStackTrace();
                         } catch (InterruptedException e) {
