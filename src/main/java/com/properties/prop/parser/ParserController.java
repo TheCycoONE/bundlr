@@ -409,9 +409,7 @@ public class ParserController {
         File file = new File(bundle.getPath());
         File[] fileArray = file.listFiles();
         if (fileArray != null) {
-            List<File> files = Arrays.stream(fileArray) //
-                    .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                    .collect(Collectors.toList());
+            List<File> files = getFiles(fileArray, bundle.getName());
             Map<String, String> fileMap = new LinkedHashMap<>();
             for (File currentFile : files) {
                 fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
@@ -451,9 +449,7 @@ public class ParserController {
         File file = new File(bundle.getPath());
         File[] fileArray = file.listFiles();
         if (fileArray != null) {
-            List<File> files = Arrays.stream(fileArray) //
-                    .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                    .collect(Collectors.toList());
+            List<File> files = getFiles(fileArray, bundle.getName());
             Map<String, String> fileMap = new LinkedHashMap<>();
             for (File currentFile : files) {
                 fileMap.put(FilenameUtils.getBaseName(currentFile.getName()), currentFile.getPath());
@@ -524,9 +520,7 @@ public class ParserController {
                         if (file.exists()) {
                             File[] fileArray = file.listFiles();
                             if (fileArray != null) {
-                                List<File> files = Arrays.stream(fileArray) //
-                                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundle.getName())) //
-                                        .collect(Collectors.toList());
+                                List<File> files = getFiles(fileArray, bundle.getName());
                                 updateBundleIndex(bundle, files, fileMap);
                                 long bundleModifiedLong=bundleModifiedTime.toMillis();
                                 bundle.setLastModified(bundleModifiedLong);
@@ -675,9 +669,7 @@ public class ParserController {
             if (file != null) {
                 File[] fileArray = file.listFiles();
                 if (fileArray != null) {
-                    List<File> files = Arrays.stream(fileArray) //
-                            .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
-                            .collect(Collectors.toList());
+                    List<File> files = getFiles(fileArray, bundleName);
                     try (Stream<Path> paths = Files.walk(Paths.get(file.getAbsolutePath()))) {
                         updateFileMap(bundle,paths);
                         updateLastModifiedTime(bundle.getPath());
@@ -708,9 +700,7 @@ public class ParserController {
         if(fileMap.isEmpty()){
             File[] fileArray = file.listFiles();
             if (fileArray != null) {
-                List<File> files = Arrays.stream(fileArray) //
-                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
-                        .collect(Collectors.toList());
+                List<File> files = getFiles(fileArray, bundleName);
                 processFilesForBundle(bundle, file, files);
             }
         }
@@ -720,9 +710,7 @@ public class ParserController {
         String bundleName=bundle.getName();
         File[] fileArray = file.listFiles();
         if (fileArray != null) {
-            List<File> files = Arrays.stream(fileArray) //
-                        .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(bundleName)) //
-                        .collect(Collectors.toList());
+            List<File> files = getFiles(fileArray, bundleName);
             if(files.size()==bundle.getFileMap().size()) {
                 processFilesForBundle(bundle, file, files);
             }
@@ -1272,7 +1260,16 @@ public class ParserController {
                 if (bundles != null) {
                     bundles.remove(bundle);
                     lockFileWatcher();
-                    FileUtils.deleteDirectory(new File(bundle.getPath()));
+                    File bundleFile=new File(bundle.getPath());
+                    File[] fileArray = bundleFile.listFiles();
+                    List<File> files = getFiles(fileArray, bundle.getName());
+                    for(File file : files){
+                        Files.deleteIfExists(file.toPath());
+                    }
+                    boolean isEmpty=Files.list(bundleFile.toPath()).findAny().isEmpty();
+                    if(isEmpty) {
+                        FileUtils.deleteDirectory(bundleFile);
+                    }
                     loadBundleWatchers();
                     loadFolderWatchers();
                     bundleBox.setItems(bundles);
@@ -1284,5 +1281,11 @@ public class ParserController {
                 }
             }
         }
+    }
+
+    private List<File> getFiles(File[] fileArray, String name) {
+        return Arrays.stream(fileArray) //
+                .filter(subFile -> FilenameUtils.getBaseName(subFile.getName()).startsWith(name)) //
+                .collect(Collectors.toList());
     }
 }
