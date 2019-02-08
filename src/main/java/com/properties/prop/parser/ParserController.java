@@ -566,7 +566,6 @@ public class ParserController {
                     while ((key = watchService.take()) != null) {
                             for (WatchEvent<?> event : key.pollEvents()) {
                                 if (!internalChange) {
-                                    synchronized (this) {
                                         Path path = filePath.resolve(event.context().toString());
                                         String pathString = path.toString();
                                         File potentialFile = path.toFile();
@@ -593,7 +592,6 @@ public class ParserController {
                                             workWithBundle(potentialFile, bundle);
                                         }
                                     }
-                                }
                             }
                         key.reset();
                         if(internalChange) {
