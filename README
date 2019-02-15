@@ -4,4 +4,6 @@ In order to use just download the bundleBee.jar.
 Once running it will create an indexes folder where it stores all lucene indexes for different files you are going to upload.
 For anyone interested in running the app inside intellij.Please add the following to your run configuration under VM Options:
 --module-path "javafx/lib" --add-modules=javafx.controls,javafx.fxml
+Anyone wanting to generate the executable jar for themselves can use the "bootJar" gradle task.
+This will generate the executable jar under the build/libs folder.
 Special thanks to Alex Hadar for testing and Adrian Vultur for coming up with the name BundleBee
