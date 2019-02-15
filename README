@@ -1,4 +1,5 @@
 Introducing BundleBee the minimalist resource bundle editor with full text search.
+Before running please install jdk 11.
 In order to use just download the bundleBee.jar.
 Once running it will create an indexes folder where it stores all lucene indexes for different files you are going to upload.
 For anyone interested in running the app inside intellij.Please add the following to your run configuration under VM Options:
