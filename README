@@ -5,6 +5,6 @@ Once running it will create an indexes folder where it stores all lucene indexes
 For anyone interested in running the app inside intellij.Please add the following to your run configuration under VM Options:
 --module-path "javafx/lib" --add-modules=javafx.controls,javafx.fxml
 Anyone wanting to generate the executable jar for themselves can use the "bootJar" gradle task.
-If you want to tweak the UI you can use scene builder which can be downloaded at https://gluonhq.com/products/scene-builder/
 This will generate the executable jar under the build/libs folder.
+If you want to tweak the UI you can use scene builder which can be downloaded at https://gluonhq.com/products/scene-builder/
 Special thanks to Alex Hadar for testing and Adrian Vultur for coming up with the name BundleBee
