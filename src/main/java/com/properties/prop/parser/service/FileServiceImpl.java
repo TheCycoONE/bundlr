@@ -8,6 +8,8 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.PropertiesConfigurationLayout;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BOMInputStream;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -18,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 @Service
 public class FileServiceImpl implements FileService {
 
-    public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException {
+    public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException, IOException {
         Set<String> keys=new LinkedHashSet<>();
         Map<String,Resource> resourceMap=new LinkedHashMap<>();
         List<PropertiesConfiguration> propertiesConfigurations=new LinkedList<>();
@@ -26,7 +28,13 @@ public class FileServiceImpl implements FileService {
             PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration(file);
             Iterator<String> keyIterator=propertiesConfiguration.getKeys();
             while (keyIterator.hasNext()){
-                keys.add(keyIterator.next());
+                String key=keyIterator.next();
+                ByteArrayInputStream byteArrayInputStream=new ByteArrayInputStream(key.getBytes(Charset.forName("ISO-8859-1")));
+                BOMInputStream bomInputStream=new BOMInputStream(byteArrayInputStream);
+                if(bomInputStream.hasBOM()){
+                    bomInputStream.skip(bomInputStream.getBOM().length());
+                }
+                keys.add(IOUtils.toString(bomInputStream,Charset.forName("UTF-8")));
             }
             propertiesConfigurations.add(propertiesConfiguration);
         }
