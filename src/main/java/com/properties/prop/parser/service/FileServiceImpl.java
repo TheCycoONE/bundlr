@@ -34,7 +34,10 @@ public class FileServiceImpl implements FileService {
                 if(bomInputStream.hasBOM()){
                     bomInputStream.skip(bomInputStream.getBOM().length());
                 }
-                keys.add(IOUtils.toString(bomInputStream,Charset.forName("UTF-8")));
+                String noBOMKey=IOUtils.toString(bomInputStream,Charset.forName("UTF-8"));
+                if(!noBOMKey.startsWith("#")&&!noBOMKey.equals("")) {
+                    keys.add(noBOMKey);
+                }
             }
             propertiesConfigurations.add(propertiesConfiguration);
         }
