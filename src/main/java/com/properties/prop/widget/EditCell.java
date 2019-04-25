@@ -230,7 +230,7 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
                 event.getCode() == KeyCode.TAB)) {
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
-
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectNext();
 
                     event.consume();
@@ -239,6 +239,7 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
             } else if (event.getCode() == KeyCode.LEFT ) {
 
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectPrevious();
 
                     event.consume();
