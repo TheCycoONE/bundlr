@@ -49,14 +49,14 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
         }
 
         super.startEdit();
+        if (textField == null) {
+
+            textField = getTextField();
+            textField.setText(getItemText());
+            textField.positionCaret(getItemText().length());
+        }
 
         if (isEditing()) {
-
-            if (textField == null) {
-
-                textField = getTextField();
-
-            }
 
             escapePressed = false;
 
@@ -139,7 +139,6 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
             this.commitEdit(getConverter().fromString(newText));
 
         }
-
         setGraphic(null); // stop editing with TextField
 
     }
@@ -240,14 +239,15 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.UP &&!isEditing()) {
+            } else if (event.getCode() == KeyCode.UP) {
 
+                getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                 getTableView().getSelectionModel().selectAboveCell();
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.DOWN &&!isEditing()) {
-
+            } else if (event.getCode() == KeyCode.DOWN) {
+                getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                 getTableView().getSelectionModel().selectBelowCell();
 
                 event.consume();
@@ -307,12 +307,12 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
     private void startEdit(final TextField textField) {
 
-        if (textField != null) {
+        /*if (textField != null) {
 
             textField.setText(getItemText());
             textField.positionCaret(getItemText().length());
 
-        }
+        }*/
 
         setText(null);
 
