@@ -230,34 +230,32 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
                 event.getCode() == KeyCode.TAB)) {
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
-                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectNext();
-
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     event.consume();
                 }
 
             } else if (event.getCode() == KeyCode.LEFT ) {
 
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
-                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectPrevious();
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
                     event.consume();
                 }
 
             } else if (event.getCode() == KeyCode.UP) {
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
-
-                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectAboveCell();
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
                     event.consume();
                 }
 
             } else if (event.getCode() == KeyCode.DOWN) {
                 if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
-                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
                     getTableView().getSelectionModel().selectBelowCell();
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
                     event.consume();
                 }
