@@ -226,15 +226,15 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.RIGHT ||
+            } else if ((event.getCode() == KeyCode.RIGHT ||
 
-                event.getCode() == KeyCode.TAB) {
+                event.getCode() == KeyCode.TAB)&&!isEditing()) {
 
                 getTableView().getSelectionModel().selectNext();
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.LEFT) {
+            } else if (event.getCode() == KeyCode.LEFT &&!isEditing()) {
 
                 getTableView().getSelectionModel().selectPrevious();
 
