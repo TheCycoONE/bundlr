@@ -640,7 +640,7 @@ public class ParserController {
         } catch (ConfigurationException | ExecutionException e) {
             e.printStackTrace();
         } catch (InterruptedException ignored) {
-            ignored.printStackTrace();
+
         }
         if(!resourceIndexService.storeExists(bundle.getName())){
             resourceIndexService.createStore(bundle.getName());
