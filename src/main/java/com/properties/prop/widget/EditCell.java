@@ -240,13 +240,13 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.UP) {
+            } else if (event.getCode() == KeyCode.UP &&!isEditing()) {
 
                 getTableView().getSelectionModel().selectAboveCell();
 
                 event.consume();
 
-            } else if (event.getCode() == KeyCode.DOWN) {
+            } else if (event.getCode() == KeyCode.DOWN &&!isEditing()) {
 
                 getTableView().getSelectionModel().selectBelowCell();
 
