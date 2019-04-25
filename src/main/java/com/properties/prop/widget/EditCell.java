@@ -10,6 +10,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import javafx.util.converter.DefaultStringConverter;
+import org.apache.commons.lang.StringUtils;
 
 public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
@@ -227,30 +228,38 @@ public class EditCell < S, T > extends TextFieldTableCell< S, T > {
 
             } else if ((event.getCode() == KeyCode.RIGHT ||
 
-                event.getCode() == KeyCode.TAB)&&!isEditing()) {
+                event.getCode() == KeyCode.TAB)) {
+                if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
 
-                getTableView().getSelectionModel().selectNext();
+                    getTableView().getSelectionModel().selectNext();
 
-                event.consume();
+                    event.consume();
+                }
 
-            } else if (event.getCode() == KeyCode.LEFT &&!isEditing()) {
+            } else if (event.getCode() == KeyCode.LEFT ) {
 
-                getTableView().getSelectionModel().selectPrevious();
+                if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
+                    getTableView().getSelectionModel().selectPrevious();
 
-                event.consume();
+                    event.consume();
+                }
 
             } else if (event.getCode() == KeyCode.UP) {
+                if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
 
-                getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-                getTableView().getSelectionModel().selectAboveCell();
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+                    getTableView().getSelectionModel().selectAboveCell();
 
-                event.consume();
+                    event.consume();
+                }
 
             } else if (event.getCode() == KeyCode.DOWN) {
-                getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-                getTableView().getSelectionModel().selectBelowCell();
+                if(!isEditing()||(isEditing()&&StringUtils.isEmpty(getItemText()))) {
+                    getTableView().getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+                    getTableView().getSelectionModel().selectBelowCell();
 
-                event.consume();
+                    event.consume();
+                }
 
             }
 
