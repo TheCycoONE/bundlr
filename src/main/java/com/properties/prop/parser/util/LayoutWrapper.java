@@ -13,12 +13,15 @@ public class LayoutWrapper {
 
     private Writer writer;
     private PropertiesConfigurationLayout layout;
+    private char delimiter;
 
     public LayoutWrapper(Writer writer, PropertiesConfigurationLayout layout) throws ConfigurationException {
         this.writer = writer;
         this.layout = layout;
+        this.delimiter = layout.getConfiguration().isDelimiterParsingDisabled() ? 0
+                : layout.getConfiguration().getListDelimiter();
     }
-   /* public static String doMagic(String s) {
+   /*public static String doMagic(String s) {
        if(s==null) return null;
 
        char[] data=s.toCharArray();
@@ -63,6 +66,7 @@ public class LayoutWrapper {
         else return s;
     }*/
     public void save(String key,String value) throws IOException {
+
         Iterator<String> iterator=layout.getKeys().iterator();
         if(layout.getHeaderComment()!=null){
             writeln(writer,layout.getCanonicalHeaderComment(true));
@@ -88,7 +92,7 @@ public class LayoutWrapper {
                     writer.write(currentKey + "=" + currents.get(0));
                     for(int i=1;i<currents.size();i++){
                         String val=(String) currents.get(i);
-                        writer.write( " "  + val);
+                        writer.write( delimiter  + val);
                     }
                     writeln(writer,null);
                 }else {
