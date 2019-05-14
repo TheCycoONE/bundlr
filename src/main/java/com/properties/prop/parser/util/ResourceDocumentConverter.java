@@ -21,6 +21,7 @@ public class ResourceDocumentConverter {
             document.add(new TextField(entry.getKey(),entry.getValue().get(),Field.Store.YES));
             document.add(new NumericDocValuesField("size-"+entry.getKey(),entry.getValue().get().length()));
         }
+        document.add(new TextField("order",String.valueOf(resource.getOrder()),Field.Store.YES));
         FieldType fieldType=new FieldType();
         fieldType.setStored(true);
         fieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
@@ -29,7 +30,7 @@ public class ResourceDocumentConverter {
         return document;
     }
     public Resource convertToResource(Document document){
-        Resource resource=new Resource(document.get("code"),document.get("id"));
+        Resource resource=new Resource(document.get("code"),document.get("id"),Integer.valueOf(document.get("order")));
         List<IndexableField> fields=document.getFields().stream()
                 .filter(Predicate.not(indexableField -> indexableField.name().equals("code") || indexableField.name().equals("id")))
                 .collect(Collectors.toList());
@@ -42,6 +43,6 @@ public class ResourceDocumentConverter {
         return resources.stream().map(this::convertToDocument).collect(Collectors.toList());
     }
     public List<Resource> convertAllToResource(List<Document> documents){
-        return documents.stream().map(this::convertToResource).collect(Collectors.toList());
+       return documents.stream().map(this::convertToResource).collect(Collectors.toList());
     }
 }

@@ -4,23 +4,27 @@ import javafx.beans.property.SimpleStringProperty;
 
 import java.util.*;
 
-public class Resource {
+public class Resource implements Comparable<Resource>{
 
     private final SimpleStringProperty code;
 
     private String id;
 
+    private int order;
+
     private Map<String,SimpleStringProperty> properties;
 
-    public Resource(String code) {
+    public Resource(String code,int order) {
         this.code = new SimpleStringProperty(code);
         properties= new LinkedHashMap<>();
         id=UUID.randomUUID().toString();
+        this.order=order;
     }
-    public Resource(String code,String id) {
+    public Resource(String code,String id,int order) {
         this.code = new SimpleStringProperty(code);
         properties= new LinkedHashMap<>();
         this.id=id;
+        this.order=order;
     }
 
     public String getCode() {
@@ -51,4 +55,18 @@ public class Resource {
         return id;
     }
 
+    public int getOrder() {
+        return order;
+    }
+
+    @Override
+    public int compareTo(Resource o) {
+        if(this.order<o.getOrder()){
+            return -1;
+        }else if(this.order>o.getOrder()) {
+            return 1;
+        }else {
+            return 0;
+        }
+    }
 }

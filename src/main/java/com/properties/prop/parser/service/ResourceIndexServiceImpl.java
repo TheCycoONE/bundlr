@@ -129,6 +129,7 @@ public class ResourceIndexServiceImpl implements ResourceIndexService, Initializ
             DocumentStore documentStore = stores.get(storeName);
             List<Document> documents = documentStore.getAllDocuments();
             List<Resource> resources = resourceDocumentConverter.convertAllToResource(documents);
+            Collections.sort(resources);
             return FXCollections.synchronizedObservableList(FXCollections.observableArrayList(resources));
         }
         return FXCollections.synchronizedObservableList(FXCollections.emptyObservableList());

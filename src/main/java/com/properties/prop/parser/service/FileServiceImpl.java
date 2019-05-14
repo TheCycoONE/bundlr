@@ -1,7 +1,7 @@
 package com.properties.prop.parser.service;
 
 import com.properties.prop.parser.model.Resource;
-import com.properties.prop.parser.model.Tuple;
+import com.properties.prop.parser.util.LayoutWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.apache.commons.configuration.ConfigurationException;
@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -23,6 +24,7 @@ public class FileServiceImpl implements FileService {
     public ObservableList<Resource> loadRowData(List<File> files) throws ConfigurationException, ExecutionException, InterruptedException, IOException {
         Set<String> keys=new LinkedHashSet<>();
         Map<String,Resource> resourceMap=new LinkedHashMap<>();
+        int k=0;
         List<PropertiesConfiguration> propertiesConfigurations=new LinkedList<>();
         for (File file : files) {
             PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration(file);
@@ -48,7 +50,8 @@ public class FileServiceImpl implements FileService {
                         if(resourceMap.containsKey(key)){
                             resource=resourceMap.get(key);
                         }else {
-                            resource=new Resource(key);
+                            resource=new Resource(key,k);
+                            k++;
                             resourceMap.put(key, resource);
                         }
                         String fileName= FilenameUtils.getBaseName(propertiesConfiguration.getFileName());
@@ -65,40 +68,64 @@ public class FileServiceImpl implements FileService {
             return FXCollections.emptyObservableList();
         }
     }
+    /*public static String doMagic(String s) {
+        if(s==null) return null;
+
+        char[] data=s.toCharArray();
+        int lpos, upos; *//* Latin position, Unicode position. *//*
+        char t; *//* For building chars. *//*
+        int count; *//* Number of following bytes in character code. *//*
+        boolean changed=false; *//* If the string was modified. *//*
+
+        for(lpos=upos=0; lpos<data.length; lpos++) {
+            if(data[lpos]<0x80) {
+                *//* Yay, plain ascii *//*
+                data[upos]=data[lpos];
+                upos++;
+            } else if(data[lpos]>0xFF) {
+                *//* Not Latin1 String! *//*
+                return s;
+            } else if(data[lpos]>0xEF) {
+                *//* Our chars are 16 bit, so these won't work anyways. *//*
+                return s;
+            } else {
+                t=data[lpos];
+                if((t|0xE0)==t) count=2; *//* Two additional bytes. *//*
+                else if((t|0xC0)==t) count=1; *//* Just one additional. *//*
+                else return s; *//* Not valid UTF-8. *//*
+
+                if(lpos+count>=data.length)
+                    return s; *//* We're missing bytes. *//*
+
+                t=(char)(t&(((1<<(6-count))-1)));
+
+                for(int i=1; i<=count; i++) {
+                    if(data[lpos+i]>0xBF)
+                        return s; *//* Invalid follow-up char. *//*
+                    t=(char)((t<<6)|(data[lpos+i]&0x3F));
+                }
+
+                lpos+=count;
+                data[upos]=t;
+                upos++;
+                changed=true;
+            }
+        }
+        if(changed)
+            return new String(data,0,upos);
+        else return s;
+    }*/
 
     @Override
     public void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException {
         File file = new File(filePath);
         PropertiesConfiguration config = new PropertiesConfiguration();
         PropertiesConfigurationLayout layout = new PropertiesConfigurationLayout(config);
-        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
-        config.setProperty(key,new String(value.getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")));
-        layout.save(new FileWriter(filePath, Charset.forName("ISO-8859-1"),false));
+        InputStreamReader reader=new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);
+        layout.load(reader);
+        FileWriter writer=new FileWriter(filePath, StandardCharsets.UTF_8,false);
+        LayoutWrapper wrapper=new LayoutWrapper(writer,layout);
+        wrapper.save(key,value);
     }
 
-    @Override
-    public void updateKeyInFiles(List<Tuple> codeValues, String code, String newCode) throws IOException, ConfigurationException {
-        for(Tuple fileKeyValuePair : codeValues){
-            updateKeyValue(code,newCode,fileKeyValuePair);
-        }
-    }
-
-    private PropertiesConfigurationLayout getPropertiesConfiguration(File file) throws ConfigurationException, FileNotFoundException {
-        PropertiesConfiguration config = new PropertiesConfiguration();
-        PropertiesConfigurationLayout layout = new PropertiesConfigurationLayout(config);
-        layout.load(new InputStreamReader(new FileInputStream(file)));
-        return layout;
-    }
-
-    private void updateKeyValue(String code,String newCode,Tuple fileKeyValuePair) throws IOException, ConfigurationException {
-        File file = new File(fileKeyValuePair.getKey());
-        PropertiesConfigurationLayout layout = getPropertiesConfiguration(file);
-        layout.load(new InputStreamReader(new FileInputStream(file),Charset.forName("ISO-8859-1")));
-        if(fileKeyValuePair.getValue()!=null&&!fileKeyValuePair.getValue().equals("")) {
-            layout.getConfiguration().setProperty(code,null);
-            layout.getConfiguration().setProperty(newCode,new String(fileKeyValuePair.getValue().getBytes(Charset.forName("UTF-8")), Charset.forName("ISO-8859-1")) );
-        }
-        layout.save(new FileWriter(fileKeyValuePair.getKey(), Charset.forName("ISO-8859-1"),false));
-        System.out.println();
-    }
 }

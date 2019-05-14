@@ -2,7 +2,6 @@ package com.properties.prop.parser;
 
 import com.properties.prop.parser.model.Bundle;
 import com.properties.prop.parser.model.Resource;
-import com.properties.prop.parser.model.Tuple;
 import com.properties.prop.parser.service.BundleService;
 import com.properties.prop.parser.service.FileService;
 import com.properties.prop.parser.service.ResourceIndexService;
@@ -82,6 +81,8 @@ public class ParserController {
     private volatile boolean internalChange = false;
     private boolean matchFound;
     private ObservableList<Resource> unsortedResources;
+    private List<Path> paths;
+    private List<Bundle> affectedBundles;
 
     @Autowired
     private FileService fileService;
@@ -767,7 +768,6 @@ public class ParserController {
             resources=resourceIndexService.getAllResources(storeName);
         }
         parserTable.setItems(resources);
-        parserTable.getItems().add(new Resource(""));
     }
     private void addResourcesToIndex(Bundle bundle,List<File> files) throws IOException, ConfigurationException, ExecutionException, InterruptedException {
         String storeName=bundle.getName();
@@ -788,7 +788,6 @@ public class ParserController {
             resources=resourceIndexService.getAllResources(storeName);
         }
         parserTable.setItems(resources);
-        parserTable.getItems().add(new Resource(""));
     }
     private void specialLoadData(String storeName) {
         if(resources!=null) {
@@ -799,7 +798,6 @@ public class ParserController {
             resources=searchResourcesMap.get(searchOption);
         }
         parserTable.setItems(resources);
-        parserTable.getItems().add(new Resource(""));
     }
 
     private void changeColumnNames(Map<String,String> fileMap) {
@@ -824,48 +822,12 @@ public class ParserController {
             searchOptionsBox.getSelectionModel().select(0);
         }
         List<TableColumn> tableColumns=columnNames.stream().map(TableColumn::new).collect(Collectors.toList());
+        affectedBundles=bundles.stream().filter(bundle -> bundle.getPath().equals(currentBundle.getPath())).collect(Collectors.toList());
+        paths=affectedBundles.stream().flatMap(bundle -> bundle.getFileMap().values().stream()).map(pathString -> Path.of(pathString)).collect(Collectors.toList());
         TableColumn codeColumn=new TableColumn("code");
         codeColumn.setCellValueFactory(new PropertyValueFactory<Resource,String>("code"));
-
         codeColumn.setCellFactory(EditCell.forTableColumn());
-        codeColumn.setOnEditCommit((Event event) -> {
-                    CellEditEvent<Resource, String> cellEditEvent = (CellEditEvent<Resource, String>) event;
-                    Resource resource = (cellEditEvent).getTableView().getItems().get(
-                            cellEditEvent.getTablePosition().getRow());
-                    String oldCode = resource.getCode();
-                    boolean isCodeRepeated=resources.stream().map(currentResource -> currentResource.getCode()).anyMatch(code -> code.equals(cellEditEvent.getNewValue()));
-                    if (!cellEditEvent.getNewValue().equals("")) {
-                        if(!cellEditEvent.getNewValue().equals(oldCode)&&!cellEditEvent.getNewValue().contains(" ")) {
-                            if(!isCodeRepeated) {
-                                resource.setCode(cellEditEvent.getNewValue());
-                                try {
-                                    if (!oldCode.equals("")) {
-                                        resourceIndexService.updateDocument(currentBundle.getName(), resource);
-                                        List<Tuple> tuples = new LinkedList<>();
-                                        Map<String,String> bundleFileMap=currentBundle.getFileMap();
-                                        for (String key : bundleFileMap.keySet()) {
-                                            tuples.add(new Tuple(bundleFileMap.get(key), resource.getPropertyValue(key)));
-                                        }
-                                        lockFileWatcher();
-                                        fileService.updateKeyInFiles(tuples, oldCode, resource.getCode());
-                                        updateLastModifiedTime(currentBundle.getPath());
-                                    } else {
-                                        parserTable.getItems().add(new Resource(""));
-                                    }
-                                } catch (IOException | ConfigurationException e) {
-                                    e.printStackTrace();
-                                }
-                            }else{
-                                parserTable.refresh();
-                            }
-                        }else{
-                            parserTable.refresh();
-                        }
-                    }else{
-                        parserTable.refresh();
-                    }
-                }
-        );
+        codeColumn.setEditable(false);
         for(TableColumn tableColumn : tableColumns){
             tableColumn.setCellValueFactory((Callback<TableColumn.CellDataFeatures<Resource, String>, ObservableValue<String>>) r -> r.getValue().getProperty(tableColumn.getText()));
             tableColumn.setCellFactory(EditCell.forTableColumn());
@@ -881,7 +843,7 @@ public class ParserController {
                             Map<String,String> bundleFileMap=currentBundle.getFileMap();
                             lockFileWatcher();
                             fileService.saveOrUpdateProperty(bundleFileMap.get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
-                            updateLastModifiedTime(currentBundle.getPath());
+                            updateLastModifiedTime();
                         } catch (IOException | ConfigurationException e) {
                             e.printStackTrace();
                         }
@@ -933,11 +895,29 @@ public class ParserController {
                 if (fileMap != null && !fileMap.isEmpty()) {
                     Collection<String> filePathStrings = bundle.getFileMap().values();
                     for (String filePathString : filePathStrings) {
+                        lockFileWatcher();
                         Path path = Path.of(filePathString);
                         Files.setLastModifiedTime(path, bundleFileTime);
                     }
                 }
             }
+    }
+    private synchronized void updateLastModifiedTime() throws IOException {
+        long lastModified = Instant.now().toEpochMilli();
+        FileTime bundleFileTime = FileTime.fromMillis(lastModified);
+        for(Bundle bundle : affectedBundles) {
+            bundle.setLastModified(lastModified);
+            bundleService.updateBundle(bundle);
+            lockFileWatcher();
+            Path filePath = Path.of(bundle.getPath());
+            Files.setLastModifiedTime(filePath, bundleFileTime);
+            lockFileWatcher();
+        }
+        for (Path path : paths) {
+            lockFileWatcher();
+            Files.setLastModifiedTime(path,bundleFileTime);
+            lockFileWatcher();
+        }
     }
 
     private void setSortPolicy() {
@@ -1147,7 +1127,6 @@ public class ParserController {
                 parserTable.setItems(searchedResources);
             }
             reloadAllColumns();
-            parserTable.getItems().add(new Resource(""));
         }
     }
 
@@ -1173,7 +1152,6 @@ public class ParserController {
                     loadResourcesMap(searchString, fieldsArray, currentBundle);
                     resources=resourceIndexService.getAllResources(currentBundle.getName());
                     parserTable.setItems(resources);
-                    parserTable.getItems().add(new Resource(""));
                     reloadAllColumns();
                 }
             }
@@ -1224,7 +1202,6 @@ public class ParserController {
         if (!queryString.matches("( +)") && !queryString.equals("")&&searchOptionsBox.getItems().size()>1) {
             searchOptionsBox.show();
         }
-        parserTable.getItems().add(new Resource(""));
     }
 
     private void loadResourcesMap(String queryString, String[] fieldsArray,Bundle bundle) throws ParseException, IOException {
