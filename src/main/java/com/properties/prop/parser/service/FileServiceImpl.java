@@ -68,53 +68,6 @@ public class FileServiceImpl implements FileService {
             return FXCollections.emptyObservableList();
         }
     }
-    /*public static String doMagic(String s) {
-        if(s==null) return null;
-
-        char[] data=s.toCharArray();
-        int lpos, upos; *//* Latin position, Unicode position. *//*
-        char t; *//* For building chars. *//*
-        int count; *//* Number of following bytes in character code. *//*
-        boolean changed=false; *//* If the string was modified. *//*
-
-        for(lpos=upos=0; lpos<data.length; lpos++) {
-            if(data[lpos]<0x80) {
-                *//* Yay, plain ascii *//*
-                data[upos]=data[lpos];
-                upos++;
-            } else if(data[lpos]>0xFF) {
-                *//* Not Latin1 String! *//*
-                return s;
-            } else if(data[lpos]>0xEF) {
-                *//* Our chars are 16 bit, so these won't work anyways. *//*
-                return s;
-            } else {
-                t=data[lpos];
-                if((t|0xE0)==t) count=2; *//* Two additional bytes. *//*
-                else if((t|0xC0)==t) count=1; *//* Just one additional. *//*
-                else return s; *//* Not valid UTF-8. *//*
-
-                if(lpos+count>=data.length)
-                    return s; *//* We're missing bytes. *//*
-
-                t=(char)(t&(((1<<(6-count))-1)));
-
-                for(int i=1; i<=count; i++) {
-                    if(data[lpos+i]>0xBF)
-                        return s; *//* Invalid follow-up char. *//*
-                    t=(char)((t<<6)|(data[lpos+i]&0x3F));
-                }
-
-                lpos+=count;
-                data[upos]=t;
-                upos++;
-                changed=true;
-            }
-        }
-        if(changed)
-            return new String(data,0,upos);
-        else return s;
-    }*/
 
     @Override
     public void saveOrUpdateProperty(String filePath, String key, String value) throws IOException, ConfigurationException {
