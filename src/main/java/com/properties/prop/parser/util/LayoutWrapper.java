@@ -92,7 +92,7 @@ public class LayoutWrapper {
                     writer.write(currentKey + "=" + currents.get(0));
                     for(int i=1;i<currents.size();i++){
                         String val=(String) currents.get(i);
-                        writer.write( delimiter  + val);
+                        writer.write( delimiter+" "+ val);
                     }
                     writeln(writer,null);
                 }else {
