@@ -67,7 +67,7 @@ public class LayoutWrapper {
     }*/
     public void save(String key,String value) throws IOException {
 
-        Iterator<String> iterator=layout.getKeys().iterator();
+        Iterator<String> iterator=layout.getConfiguration().getKeys();
         if(layout.getHeaderComment()!=null){
             writeln(writer,layout.getCanonicalHeaderComment(true));
             writeln(writer,null);
@@ -105,6 +105,9 @@ public class LayoutWrapper {
                     writer.write(currentKey + "=" + value + LINE_SEPARATOR);
                 }
             }
+        }
+        if(layout.getConfiguration().getProperty(key)==null){
+            writer.write(key + "=" + value + LINE_SEPARATOR);
         }
         writer.flush();
         writer.close();

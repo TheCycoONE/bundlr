@@ -839,10 +839,12 @@ public class ParserController {
                     if(!resource.getPropertyValue(tableColumn.getText()).equals(cellEditEvent.getNewValue())) {
                         resource.setProperty(tableColumn.getText(), cellEditEvent.getNewValue());
                         try {
+                            lockFileWatcher();
                             resourceIndexService.updateDocument(currentBundle.getName(), resource);
                             Map<String,String> bundleFileMap=currentBundle.getFileMap();
                             lockFileWatcher();
                             fileService.saveOrUpdateProperty(bundleFileMap.get(tableColumn.getText()), resource.getCode(), resource.getPropertyValue(tableColumn.getText()));
+                            lockFileWatcher();
                             updateLastModifiedTime();
                         } catch (IOException | ConfigurationException e) {
                             e.printStackTrace();
